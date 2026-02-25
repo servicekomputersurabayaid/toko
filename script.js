@@ -274,6 +274,8 @@ function saveWishlist() {
 function updateWishlistUI() {
     const countEl = document.getElementById('wishlist-count');
     if(countEl) countEl.innerText = wishlist.length;
+    const mobileCountEl = document.getElementById('mobile-wishlist-count');
+    if(mobileCountEl) mobileCountEl.innerText = wishlist.length;
 
     const container = document.getElementById('wishlist-items');
     if(container) {
@@ -327,6 +329,8 @@ function updateCartUI() {
     const totalQty = cart.reduce((acc, item) => acc + (item.qty || 0), 0);
     const countEl = document.getElementById('cart-count');
     if(countEl) countEl.innerText = totalQty;
+    const mobileCountEl = document.getElementById('mobile-cart-count');
+    if(mobileCountEl) mobileCountEl.innerText = totalQty;
 
     const cartItemsContainer = document.getElementById('cart-items');
     const checkoutForm = document.getElementById('checkout-form');
@@ -962,6 +966,52 @@ document.getElementById('close-track').addEventListener('click', () => {
     document.getElementById('track-modal').style.display = 'none';
 });
 document.getElementById('btn-track').addEventListener('click', trackPackage);
+
+// --- MOBILE NAVIGATION LISTENERS ---
+const mobileCartBtn = document.getElementById('mobile-cart-btn');
+if(mobileCartBtn) {
+    mobileCartBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const modal = document.getElementById('cart-modal');
+        modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+        if(modal.style.display === 'block') fillCheckoutData();
+    });
+}
+
+const mobileWishlistBtn = document.getElementById('mobile-wishlist-btn');
+if(mobileWishlistBtn) {
+    mobileWishlistBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('wishlist-modal').style.display = 'block';
+    });
+}
+
+const mobileAccountBtn = document.getElementById('mobile-account-btn');
+if(mobileAccountBtn) {
+    mobileAccountBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if(currentUser) {
+            document.getElementById('mobile-user-info').innerText = currentUser.email;
+            document.getElementById('mobile-menu-modal').style.display = 'block';
+        } else {
+            document.getElementById('login-modal').style.display = 'block';
+        }
+    });
+}
+
+// Mobile Menu Actions
+document.getElementById('btn-mobile-history')?.addEventListener('click', () => {
+    document.getElementById('mobile-menu-modal').style.display = 'none';
+    document.getElementById('btn-history-nav').click();
+});
+document.getElementById('btn-mobile-track')?.addEventListener('click', () => {
+    document.getElementById('mobile-menu-modal').style.display = 'none';
+    document.getElementById('track-modal').style.display = 'block';
+});
+document.getElementById('btn-mobile-logout')?.addEventListener('click', () => {
+    document.getElementById('mobile-menu-modal').style.display = 'none';
+    signOut(auth);
+});
 
 // --- AUTHENTICATION LOGIC ---
 
