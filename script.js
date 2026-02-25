@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, addDoc, runTransaction, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -13,11 +14,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 let products = [];
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
+let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
 let currentShippingCost = 0; // Variabel global untuk menyimpan ongkir aktif
 let availableCouriers = [];
+let currentUser = null; // Menyimpan data user yang login
+let storeConfig = null; // Menyimpan konfigurasi toko
+let currentPage = 1;
+const itemsPerPage = 20; // Jumlah produk per halaman
 
 // KONFIGURASI BINDERBYTE (SERVER SENDIRI)
 const BINDERBYTE_URL = 'https://servicekomputersurabaya.id/binderbyte.php'; // Pastikan file ini diupload
@@ -57,10 +64,21 @@ async function loadProducts() {
             renderProducts();
         }
 
-        updateCartUI(); // Update UI cart saat load awal
     } catch (error) {
         console.error("Error loading products:", error);
         productList.innerHTML = "<p>Gagal memuat produk dari database.</p>";
+    }
+}
+
+async function loadStoreConfig() {
+    try {
+        const docRef = doc(db, "settings", "store_config");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            storeConfig = docSnap.data();
+        }
+    } catch (e) {
+        console.error("Gagal load config:", e);
     }
 }
 
@@ -84,14 +102,23 @@ window.filterCategory = function(category, element) {
     if(element) element.classList.add('active');
 
     if (category === 'all') {
-        renderProducts(products);
+        currentPage = 1;
+        renderProducts(products, true);
     } else {
         const filtered = products.filter(p => p.category === category);
-        renderProducts(filtered);
+        currentPage = 1;
+        renderProducts(filtered, true);
     }
 }
 
-function renderProducts(data = products) {
+function renderProducts(data = products, resetPage = false) {
+    if (resetPage) currentPage = 1;
+
+    // Logic Pagination
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const paginatedData = data.slice(start, end);
+
     const productList = document.getElementById('product-list');
     if (data.length === 0) {
         productList.innerHTML = '<p style="text-align:center; width:100%;">Produk tidak ditemukan.</p>';
@@ -99,8 +126,12 @@ function renderProducts(data = products) {
     }
 
     let html = '<div class="product-grid">';
-    html += data.map(product => `
+    html += paginatedData.map(product => {
+        const isWishlist = wishlist.some(item => item.id === product.id);
+        const heartClass = isWishlist ? 'active' : '';
+        return `
         <div class="product-card">
+            <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
             <div onclick="window.location.href='detail.html?id=${product.id}'" style="cursor:pointer">
                 <img src="${product.image}" alt="${product.name}" class="product-img">
             </div>
@@ -109,7 +140,7 @@ function renderProducts(data = products) {
                 <p class="product-price">Rp ${product.price.toLocaleString('id-ID')}</p>
                 <button class="btn-add" data-id="${product.id}">+ Keranjang</button>
             </div>
-        </div>`).join('');
+        </div>`}).join('');
     html += '</div>';
     
     productList.innerHTML = html;
@@ -120,17 +151,80 @@ function renderProducts(data = products) {
             addToCart(e.target.dataset.id);
         });
     });
+
+    // Event Listener untuk tombol Wishlist
+    document.querySelectorAll('.btn-wishlist').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            toggleWishlist(e.currentTarget.dataset.id);
+        });
+    });
+
+    setupPagination(data);
+}
+
+function setupPagination(data) {
+    const paginationEl = document.getElementById('pagination');
+    if(!paginationEl) return;
+    
+    paginationEl.innerHTML = "";
+    const pageCount = Math.ceil(data.length / itemsPerPage);
+
+    if (pageCount <= 1) return; // Tidak perlu pagination jika cuma 1 halaman
+
+    for (let i = 1; i <= pageCount; i++) {
+        const btn = document.createElement('button');
+        btn.innerText = i;
+        btn.classList.add('page-btn');
+        if (i === currentPage) btn.classList.add('active');
+        btn.addEventListener('click', () => {
+            currentPage = i;
+            renderProducts(data);
+            window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll ke atas saat ganti halaman
+        });
+        paginationEl.appendChild(btn);
+    }
 }
 
 function handleSearch(keyword) {
     const filtered = products.filter(p => p.name.toLowerCase().includes(keyword.toLowerCase()));
-    renderProducts(filtered);
+    currentPage = 1;
+    renderProducts(filtered, true);
+}
+
+function sortProducts(criteria) {
+    let sortedProducts = [...products]; // Copy array agar tidak merusak urutan asli jika perlu reset
+    
+    switch (criteria) {
+        case 'price-asc':
+            sortedProducts.sort((a, b) => a.price - b.price);
+            break;
+        case 'price-desc':
+            sortedProducts.sort((a, b) => b.price - a.price);
+            break;
+        case 'name-asc':
+            sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+        case 'name-desc':
+            sortedProducts.sort((a, b) => b.name.localeCompare(a.name));
+            break;
+        default:
+            // Default urutan (biasanya berdasarkan ID atau waktu load)
+            break;
+    }
+    currentPage = 1;
+    renderProducts(sortedProducts, true);
 }
 
 // Event Listener Search
 const searchInput = document.getElementById('search-input');
 if (searchInput) {
     searchInput.addEventListener('input', (e) => handleSearch(e.target.value));
+}
+
+// Event Listener Sort
+const sortSelect = document.getElementById('sort-select');
+if (sortSelect) {
+    sortSelect.addEventListener('change', (e) => sortProducts(e.target.value));
 }
 
 // 2. Logic Keranjang
@@ -145,7 +239,81 @@ function addToCart(id) {
     }
     saveCart();
     updateCartUI();
-    alert("Produk masuk keranjang!");
+    showToast("Produk masuk keranjang!");
+}
+
+// Logic Wishlist
+window.toggleWishlist = function(id) {
+    const product = products.find(p => p.id === id);
+    const index = wishlist.findIndex(item => item.id === id);
+
+    if (index > -1) {
+        if(!confirm("Hapus dari Wishlist?")) return; // Konfirmasi hapus
+        wishlist.splice(index, 1); // Hapus jika sudah ada
+        showToast("Dihapus dari Wishlist");
+    } else {
+        wishlist.push(product); // Tambah jika belum ada
+        showToast("Ditambahkan ke Wishlist");
+    }
+    saveWishlist();
+    updateWishlistUI();
+    
+    // Re-render produk untuk update ikon hati
+    const searchInput = document.getElementById('search-input');
+    if(searchInput && searchInput.value) {
+        handleSearch(searchInput.value);
+    } else {
+        renderProducts();
+    }
+}
+
+function saveWishlist() {
+    localStorage.setItem("wishlist", JSON.stringify(wishlist));
+}
+
+function updateWishlistUI() {
+    const countEl = document.getElementById('wishlist-count');
+    if(countEl) countEl.innerText = wishlist.length;
+
+    const container = document.getElementById('wishlist-items');
+    if(container) {
+        if(wishlist.length === 0) {
+            container.innerHTML = "<p>Wishlist kosong.</p>";
+        } else {
+            container.innerHTML = wishlist.map(item => `
+                <div class="wishlist-item">
+                    <div>
+                        <h4>${item.name}</h4>
+                        <small>Rp ${item.price.toLocaleString('id-ID')}</small>
+                    </div>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <button onclick="toggleWishlist('${item.id}')" class="btn-add" style="width:auto; padding:5px; font-size:0.8rem; background:#e74c3c; display:flex; align-items:center;" title="Hapus"><span class="material-icons" style="font-size:1.2rem;">delete</span></button>
+                        <button onclick="moveFromWishlistToCart('${item.id}')" class="btn-add" style="width:auto; padding:5px 10px; font-size:0.8rem;">+ Keranjang</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+}
+
+function clearCart() {
+    cart = [];
+    saveCart();
+    updateCartUI();
+    document.getElementById('cart-modal').style.display = 'none';
+}
+
+window.moveFromWishlistToCart = function(id) {
+    addToCart(id); // Tambah ke keranjang
+    
+    // Hapus dari wishlist tanpa konfirmasi (karena dipindah)
+    const index = wishlist.findIndex(item => item.id === id);
+    if (index > -1) {
+        wishlist.splice(index, 1);
+        saveWishlist();
+        updateWishlistUI();
+        renderProducts(); // Update ikon hati di grid produk
+    }
 }
 
 function saveCart() {
@@ -153,21 +321,29 @@ function saveCart() {
 }
 
 function updateCartUI() {
-    const totalQty = cart.reduce((acc, item) => acc + item.qty, 0);
-    document.getElementById('cart-count').innerText = totalQty;
+    // Bersihkan item yang tidak valid (null atau tanpa ID)
+    cart = cart.filter(item => item && item.id);
+    
+    const totalQty = cart.reduce((acc, item) => acc + (item.qty || 0), 0);
+    const countEl = document.getElementById('cart-count');
+    if(countEl) countEl.innerText = totalQty;
 
     const cartItemsContainer = document.getElementById('cart-items');
     const checkoutForm = document.getElementById('checkout-form');
+
+    if (!cartItemsContainer || !checkoutForm) return;
 
     if (cart.length === 0) {
         cartItemsContainer.innerHTML = '<p>Keranjang masih kosong.</p>';
         checkoutForm.style.display = 'none';
     } else {
-        cartItemsContainer.innerHTML = cart.map(item => `
+        cartItemsContainer.innerHTML = cart.map(item => {
+            const price = typeof item.price === 'number' ? item.price : 0;
+            return `
             <div class="cart-item">
                 <div>
-                    <h4>${item.name}</h4>
-                    <small>Rp ${item.price.toLocaleString('id-ID')}</small>
+                    <h4>${item.name || 'Produk'}</h4>
+                    <small>Rp ${price.toLocaleString('id-ID')}</small>
                 </div>
                 <div class="qty-controls">
                     <button class="qty-btn" data-id="${item.id}" data-change="-1">-</button>
@@ -175,8 +351,13 @@ function updateCartUI() {
                     <button class="qty-btn" data-id="${item.id}" data-change="1">+</button>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
         
+        // Tambahkan tombol Kosongkan Keranjang
+        cartItemsContainer.innerHTML += `
+            <button onclick="clearCart()" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 10px; font-size: 0.8rem;">Kosongkan Keranjang</button>
+        `;
+
         // Event Listener untuk tombol Qty
         document.querySelectorAll('.qty-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -201,12 +382,36 @@ function changeQty(id, change) {
     updateCartUI();
 }
 
+window.clearCart = function() {
+    if(confirm("Yakin ingin mengosongkan keranjang?")) {
+        cart = [];
+        saveCart();
+        updateCartUI();
+        // document.getElementById('cart-modal').style.display = 'none'; // Opsional: tutup modal atau biarkan terbuka
+    }
+}
+
+/* 
+   Fungsi clearCart yang lama (untuk checkout) mungkin perlu disesuaikan 
+   agar tidak konflik atau bisa digunakan ulang.
+   Di bawah ini saya modifikasi clearCart yang dipanggil saat checkout agar tidak pakai confirm.
+*/
+
+function clearCartAfterCheckout() {
+    cart = [];
+    saveCart();
+    updateCartUI();
+    document.getElementById('cart-modal').style.display = 'none';
+}
+
+/* Update processCheckout untuk pakai clearCartAfterCheckout */
+
 function calculateTotal() {
-    const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+    const subtotal = cart.reduce((acc, item) => acc + ((item.price || 0) * (item.qty || 0)), 0);
     const courierSelect = document.getElementById('courier');
 
     // Hitung total berat untuk display
-    const totalWeightGrams = cart.reduce((acc, item) => acc + ((item.weight || 1000) * item.qty), 0);
+    const totalWeightGrams = cart.reduce((acc, item) => acc + ((item.weight || 1000) * (item.qty || 0)), 0);
     const totalWeightKg = totalWeightGrams / 1000;
     
     const total = subtotal + currentShippingCost;
@@ -221,7 +426,7 @@ function calculateTotal() {
     return { subtotal, shippingCost: currentShippingCost, total };
 }
 
-function processCheckout() {
+async function processCheckout() {
     const name = document.getElementById('name').value;
     const phone = document.getElementById('phone').value;
     const address = document.getElementById('address').value;
@@ -233,6 +438,20 @@ function processCheckout() {
     const courier = courierSelect.options[courierSelect.selectedIndex]?.text || '';
     const orderMethod = document.getElementById('order-method').value;
     
+    // Simpan data profil jika user login
+    if (currentUser) {
+        const userRef = doc(db, "users", currentUser.uid);
+        setDoc(userRef, {
+            name: name,
+            phone: phone,
+            address: address,
+            provinsi_id: document.getElementById('provinsi').value,
+            kabupaten_id: document.getElementById('kabupaten').value,
+            kecamatan_id: document.getElementById('kecamatan').value,
+            kelurahan_id: document.getElementById('kelurahan').value
+        }, { merge: true });
+    }
+
     const fullAddress = `${address}, ${kel}, ${kec}, ${kab}, ${prov}`;
 
     if (!name || !phone || !address || !prov || !kab || !kec) {
@@ -273,15 +492,76 @@ ${shippingLine}
 Silakan transfer ke:
 BCA: 1010836642
 BRI: 717901010257532
-An. Indah Wahyuning Aprilia
+An. Indah Wahyuning Aprilia (Admin: ${storeConfig ? storeConfig.storeName : 'Service komputer Surabaya'})
 
 Terima kasih!`;
 
+    // Simpan data pesanan ke Firestore dengan Custom Invoice Number
+    try {
+        await runTransaction(db, async (transaction) => {
+            // 1. Ambil counter terakhir
+            const counterRef = doc(db, "settings", "order_counter");
+            const counterDoc = await transaction.get(counterRef);
+            
+            const now = new Date();
+            const currentMonth = now.getMonth() + 1;
+            const currentYear = now.getFullYear();
+
+            let newCount = 1;
+            if (counterDoc.exists()) {
+                const data = counterDoc.data();
+                // Cek apakah bulan/tahun sama dengan yang tersimpan
+                if (data.month === currentMonth && data.year === currentYear) {
+                    newCount = (data.current || 0) + 1;
+                } else {
+                    newCount = 1; // Reset counter jika bulan/tahun berbeda
+                }
+            }
+
+            // 2. Format Nomor Invoice: 004_BJ-SKSID_02-2026
+            const padCount = String(newCount).padStart(3, '0');
+            const monthStr = String(currentMonth).padStart(2, '0');
+            const invoiceNumber = `${padCount}_BJ-SKSID_${monthStr}-${currentYear}`;
+
+            // 3. Buat dokumen order baru
+            const newOrderRef = doc(collection(db, "orders"));
+            transaction.set(newOrderRef, {
+                invoiceNumber: invoiceNumber, // Simpan nomor invoice kustom
+                nama: name,
+                hp: phone,
+                alamat: fullAddress,
+                kota: kab,
+                cart: cart,
+                subtotal: subtotal,
+                ongkir: shippingCost,
+                total: total,
+                courier: courier, // Simpan detail kurir
+                totalWeight: totalWeightKg, // Simpan total berat
+                userId: currentUser ? currentUser.uid : null, // Simpan ID User
+                status: "baru",
+                createdAt: new Date()
+            });
+
+            // 4. Update counter dengan bulan & tahun
+            transaction.set(counterRef, { 
+                current: newCount,
+                month: currentMonth,
+                year: currentYear
+            }, { merge: true });
+        });
+    } catch (e) {
+        console.error("Gagal menyimpan pesanan ke database: ", e);
+        alert("Gagal menyimpan pesanan ke database: " + e.message + "\nCek Security Rules di Firebase Console.");
+    }
+
     if (orderMethod === 'whatsapp') {
-        const adminPhone = "628994335111"; // Ganti dengan No WA Admin
+        // Gunakan No HP dari config, atau fallback ke default
+        const adminPhone = (storeConfig && storeConfig.adminPhone) ? storeConfig.adminPhone : "628994335111"; 
         window.open(`https://api.whatsapp.com/send/?phone=${adminPhone}&text=${encodeURIComponent(messageWA)}`, '_blank');
+        clearCartAfterCheckout(); // Kosongkan keranjang setelah kirim WA
     } else if (orderMethod === 'print') {
         printInvoice({ name, phone, address: fullAddress, courier, subtotal, shippingCost, total, cart, totalWeightKg });
+        clearCartAfterCheckout(); // Kosongkan keranjang setelah Print
     }
 }
 
@@ -468,6 +748,47 @@ async function loadKelurahan(id) {
     } catch (err) { console.error(err); }
 }
 
+// Fungsi Autofill Data User
+async function fillCheckoutData() {
+    if (!currentUser) return;
+
+    try {
+        const docRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            document.getElementById('name').value = data.name || '';
+            document.getElementById('phone').value = data.phone || '';
+            document.getElementById('address').value = data.address || '';
+
+            // Chain loading dropdown wilayah
+            if (data.provinsi_id) {
+                document.getElementById('provinsi').value = data.provinsi_id;
+                await loadKabupaten(data.provinsi_id);
+                
+                if (data.kabupaten_id) {
+                    document.getElementById('kabupaten').value = data.kabupaten_id;
+                    await loadKecamatan(data.kabupaten_id);
+
+                    if (data.kecamatan_id) {
+                        document.getElementById('kecamatan').value = data.kecamatan_id;
+                        await loadKelurahan(data.kecamatan_id);
+
+                        if (data.kelurahan_id) {
+                            document.getElementById('kelurahan').value = data.kelurahan_id;
+                            checkOngkir(); // Hitung ongkir otomatis
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Gagal load data user:", e);
+    }
+}
+
 async function checkOngkir() {
     const kelSelect = document.getElementById('kelurahan');
     const courierSelect = document.getElementById('courier');
@@ -604,6 +925,15 @@ async function trackPackage() {
 document.getElementById('cart-btn').addEventListener('click', () => {
     const modal = document.getElementById('cart-modal');
     modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+    if(modal.style.display === 'block') fillCheckoutData(); // Autofill saat buka keranjang
+});
+
+document.getElementById('wishlist-btn').addEventListener('click', () => {
+    document.getElementById('wishlist-modal').style.display = 'block';
+});
+
+document.getElementById('close-wishlist').addEventListener('click', () => {
+    document.getElementById('wishlist-modal').style.display = 'none';
 });
 
 document.getElementById('close-modal').addEventListener('click', () => {
@@ -627,6 +957,168 @@ document.getElementById('close-track').addEventListener('click', () => {
 });
 document.getElementById('btn-track').addEventListener('click', trackPackage);
 
+// --- AUTHENTICATION LOGIC ---
+
+const loginModal = document.getElementById('login-modal');
+const btnLoginNav = document.getElementById('btn-login-nav');
+const btnLogoutNav = document.getElementById('btn-logout-nav');
+const userNameDisplay = document.getElementById('user-name');
+let isRegisterMode = false;
+
+// Toggle Login Modal
+btnLoginNav.addEventListener('click', () => {
+    loginModal.style.display = 'block';
+});
+document.getElementById('close-login').addEventListener('click', () => {
+    loginModal.style.display = 'none';
+});
+
+// Toggle Register/Login Mode
+document.getElementById('toggle-register').addEventListener('click', (e) => {
+    e.preventDefault();
+    isRegisterMode = !isRegisterMode;
+    const title = document.getElementById('login-title');
+    const btn = document.getElementById('btn-submit-login');
+    const toggle = document.getElementById('toggle-register');
+    const forgotLink = document.getElementById('forgot-password').parentElement;
+    
+    if(isRegisterMode) {
+        title.innerText = "Daftar Member Baru";
+        btn.innerText = "Daftar";
+        toggle.innerText = "Sudah punya akun? Login";
+        forgotLink.style.display = 'none';
+    } else {
+        title.innerText = "Login Member";
+        btn.innerText = "Login";
+        toggle.innerText = "Belum punya akun? Daftar disini";
+        forgotLink.style.display = 'block';
+    }
+});
+
+// Handle Submit Login/Register
+document.getElementById('btn-submit-login').addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value;
+    const pass = document.getElementById('login-password').value;
+    
+    try {
+        if(isRegisterMode) {
+            await createUserWithEmailAndPassword(auth, email, pass);
+            alert("Pendaftaran berhasil! Silakan isi data pengiriman saat checkout.");
+        } else {
+            await signInWithEmailAndPassword(auth, email, pass);
+            alert("Login berhasil!");
+        }
+        loginModal.style.display = 'none';
+    } catch (error) {
+        if (error.code === 'auth/operation-not-allowed') {
+            alert("Error: Metode login ini belum diaktifkan di Firebase Console.");
+        } else {
+            alert("Error: " + error.message);
+        }
+    }
+});
+
+// Handle Forgot Password
+document.getElementById('forgot-password').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    if (!email) {
+        alert("Silakan isi kolom Email terlebih dahulu untuk mereset password.");
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert(`Link reset password telah dikirim ke ${email}. Silakan cek email Anda.`);
+    } catch (error) {
+        alert("Gagal mengirim reset password: " + error.message);
+    }
+});
+
+// --- ORDER HISTORY LOGIC ---
+
+document.getElementById('btn-history-nav').addEventListener('click', async () => {
+    if (!currentUser) return;
+    
+    const modal = document.getElementById('history-modal');
+    const list = document.getElementById('history-list');
+    modal.style.display = 'block';
+    list.innerHTML = '<p>Memuat riwayat...</p>';
+
+    try {
+        // Query pesanan berdasarkan userId
+        const q = query(collection(db, "orders"), where("userId", "==", currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            list.innerHTML = '<p>Belum ada riwayat pesanan.</p>';
+            return;
+        }
+
+        let html = '';
+        querySnapshot.forEach((doc) => {
+            const order = doc.data();
+            const date = order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString('id-ID') : '-';
+            const statusColor = order.status === 'selesai' ? 'green' : (order.status === 'proses' ? 'orange' : 'grey');
+            
+            html += `
+            <div style="border:1px solid #ddd; padding:10px; margin-bottom:10px; border-radius:5px;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                    <span>${order.invoiceNumber || 'Order #' + doc.id.substr(0,8)}</span>
+                    <span style="color:${statusColor}">${order.status.toUpperCase()}</span>
+                </div>
+                <p style="margin:5px 0; font-size:0.9rem;">Tanggal: ${date} | Total: Rp ${order.total.toLocaleString('id-ID')}</p>
+                <p style="margin:5px 0; font-size:0.9rem;"><strong>Resi:</strong> ${order.awb || '-'}</p>
+            </div>`;
+        });
+        list.innerHTML = html;
+    } catch (e) {
+        console.error("Gagal load history:", e);
+        list.innerHTML = '<p>Gagal memuat riwayat. Pastikan Anda login.</p>';
+    }
+});
+
+document.getElementById('close-history').addEventListener('click', () => {
+    document.getElementById('history-modal').style.display = 'none';
+});
+
+// Handle Logout
+btnLogoutNav.addEventListener('click', () => signOut(auth));
+
+// Auth State Listener
+onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    if (user) {
+        btnLoginNav.style.display = 'none';
+        btnLogoutNav.style.display = 'block';
+        document.getElementById('btn-history-nav').style.display = 'block';
+        userNameDisplay.style.display = 'block';
+        userNameDisplay.innerText = user.email.split('@')[0]; // Tampilkan nama dari email
+    } else {
+        btnLoginNav.style.display = 'block';
+        btnLogoutNav.style.display = 'none';
+        document.getElementById('btn-history-nav').style.display = 'none';
+        userNameDisplay.style.display = 'none';
+    }
+});
+
+// Toast Function
+window.showToast = function(message) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerText = message;
+    container.appendChild(toast);
+    
+    setTimeout(() => { toast.classList.add('show'); }, 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => { toast.remove(); }, 300);
+    }, 3000);
+}
+
 // Init
 loadProducts();
+loadStoreConfig();
 loadProvinsi();
+updateWishlistUI();
+updateCartUI(); // Pastikan UI keranjang selalu di-update saat awal load

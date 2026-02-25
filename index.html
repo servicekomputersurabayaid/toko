@@ -15,7 +15,18 @@
     <nav class="navbar">
         <div class="logo"><img src="assets/logo.png" alt="Service Komputer Surabaya"></div>
         <div style="display:flex; gap:20px; align-items:center;">
+            <!-- Auth Buttons -->
+            <div id="auth-container" style="display:flex; align-items:center; gap:10px;">
+                <span id="user-name" style="font-weight:bold; display:none; font-size:0.9rem;"></span>
+                <button id="btn-login-nav" class="btn-add" style="width:auto; padding:5px 15px; background:#f39c12;">Login</button>
+                <button id="btn-history-nav" class="btn-add" style="width:auto; padding:5px 15px; background:#2980b9; display:none;">Riwayat</button>
+                <button id="btn-logout-nav" class="btn-add" style="width:auto; padding:5px 15px; background:#e74c3c; display:none;">Logout</button>
+            </div>
             <span style="cursor:pointer; font-weight:bold;" id="track-btn">Cek Resi</span>
+            <div class="wishlist-icon" id="wishlist-btn">
+                <span class="material-icons">favorite</span>
+                <span id="wishlist-count">0</span>
+            </div>
             <div class="cart-icon" id="cart-btn">
                 <span class="material-icons">shopping_cart</span>
                 <span id="cart-count">0</span>
@@ -26,7 +37,16 @@
     <!-- Daftar Produk -->
     <div class="container">
         <h2>Katalog Produk</h2>
-        <input type="text" id="search-input" class="search-box" placeholder="Cari produk...">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <input type="text" id="search-input" class="search-box" placeholder="Cari produk..." style="margin-bottom: 0; flex: 1;">
+            <select id="sort-select" style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: auto;">
+                <option value="default">Urutkan</option>
+                <option value="price-asc">Harga Termurah</option>
+                <option value="price-desc">Harga Termahal</option>
+                <option value="name-asc">Nama A-Z</option>
+                <option value="name-desc">Nama Z-A</option>
+            </select>
+        </div>
         
         <!-- Menu Kategori Horizontal -->
         <div id="category-list" class="category-menu"></div>
@@ -35,6 +55,9 @@
         <div id="product-list">
             <p style="text-align:center; width:100%;">Memuat produk...</p>
         </div>
+
+        <!-- Pagination -->
+        <div id="pagination" class="pagination"></div>
     </div>
 
     <!-- Modal Keranjang & Checkout -->
@@ -96,6 +119,16 @@
         </div>
     </div>
 
+    <!-- Modal Wishlist -->
+    <div id="wishlist-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-wishlist">&times;</span>
+            <h2>Wishlist Saya</h2>
+            <div id="wishlist-items" class="cart-items"></div>
+            <button onclick="document.getElementById('wishlist-modal').style.display='none'" class="btn-add" style="margin-top:15px; background:#95a5a6;">Tutup</button>
+        </div>
+    </div>
+
     <!-- Modal Cek Resi -->
     <div id="track-modal" class="modal">
         <div class="modal-content">
@@ -116,6 +149,38 @@
             <div id="track-result" style="margin-top:20px;"></div>
         </div>
     </div>
+
+    <!-- Modal Login -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close-btn" id="close-login">&times;</span>
+            <h2 id="login-title">Login Member</h2>
+            <div class="checkout-form">
+                <input type="email" id="login-email" placeholder="Email">
+                <input type="password" id="login-password" placeholder="Password">
+                <div style="text-align: right; margin-bottom: 10px;">
+                    <a href="#" id="forgot-password" style="font-size: 0.8rem; color: #e74c3c; text-decoration: none;">Lupa Password?</a>
+                </div>
+                <button id="btn-submit-login" class="btn-wa" style="background:#3498db;">Login</button>
+                <p style="margin-top:10px; text-align:center; font-size:0.9rem;">
+                    Belum punya akun? <a href="#" id="toggle-register" style="color:#3498db;">Daftar disini</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Riwayat Pesanan -->
+    <div id="history-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-btn" id="close-history">&times;</span>
+            <h2>Riwayat Pesanan Saya</h2>
+            <div id="history-list" style="margin-top:15px;"></div>
+            <button onclick="document.getElementById('history-modal').style.display='none'" class="btn-add" style="margin-top:15px; background:#95a5a6;">Tutup</button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
 
     <script type="module" src="script.js"></script>
 </body>

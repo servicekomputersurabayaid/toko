@@ -13,11 +13,40 @@
     #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
     input, textarea { width: 100%; margin-bottom: 10px; padding: 5px; box-sizing: border-box; }
     .search-admin { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; }
+    
+    /* Login Styles */
+    #login-section { max-width: 300px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; text-align: center; }
+    #admin-content { display: none; }
+    
+    /* Settings Styles */
+    .settings-box { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; background: #f9f9f9; }
   </style>
 </head>
 <body>
 
+<div id="login-section">
+  <h3>Login Admin</h3>
+  <input type="email" id="admin-email" placeholder="Email Admin">
+  <input type="password" id="admin-password" placeholder="Password">
+  <button onclick="loginAdmin()" style="width:100%; padding:10px; background:#3498db; color:white; border:none;">Login</button>
+  <p id="login-error" style="color:red;"></p>
+</div>
+
+<div id="admin-content">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
 <h2>Upload Produk via CSV</h2>
+        <button onclick="logoutAdmin()" style="background:#e74c3c; color:white; border:none; padding:5px 10px;">Logout</button>
+    </div>
+
+<!-- Pengaturan Toko -->
+<div class="settings-box">
+    <h3>Pengaturan Toko</h3>
+    <label>Nama Toko:</label><input type="text" id="set-store-name">
+    <label>No HP Admin (Format 628...):</label><input type="text" id="set-admin-phone">
+    <label>Email Admin:</label><input type="text" id="set-admin-email">
+    <label>API Key Binderbyte:</label><input type="text" id="set-api-key">
+    <button onclick="saveSettings()" style="background:#27ae60; color:white; border:none; padding:8px 15px;">Simpan Pengaturan</button>
+</div>
 
 <input type="file" id="csvFile" accept=".csv">
 <br><br>
@@ -29,8 +58,25 @@
 <p id="status"></p>
 
 <hr>
+<h3>Daftar Pesanan Masuk</h3>
+<button onclick="loadOrders()" style="background:#3498db; color:white; border:none; padding:5px 10px; margin-bottom:10px;">Refresh Pesanan</button>
+<table id="orderTable">
+  <thead>
+    <tr>
+      <th>Tanggal</th>
+      <th>Nama Customer</th>
+      <th>Total</th>
+      <th>Status</th>
+      <th>Aksi</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<hr>
+
 <h3>Daftar Produk</h3>
-<input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Cari nama produk..." class="search-admin">
+<input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Cari nama produk atau kategori..." class="search-admin">
 <table id="productTable">
   <thead>
     <tr>
@@ -59,10 +105,32 @@
   <button onclick="cancelEdit()">Batal</button>
 </div>
 
+<!-- Order Detail Modal -->
+<div id="orderDetailModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:20px; border:1px solid #ccc; box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:1000; width:500px; max-height:80vh; overflow-y:auto;">
+    <h3>Detail Pesanan</h3>
+    <div id="orderDetailContent"></div>
+    <hr>
+    <label>No. Resi (AWB):</label>
+    <input type="text" id="orderAwbInput" placeholder="Masukkan No. Resi Pengiriman" style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc;">
+    <label>Update Status:</label>
+    <select id="orderStatusSelect">
+        <option value="baru">Baru</option>
+        <option value="proses">Proses</option>
+        <option value="selesai">Selesai</option>
+        <option value="batal">Batal</option>
+    </select>
+    <button onclick="updateOrderStatus()" style="background:#27ae60; color:white; border:none; padding:5px 10px;">Update</button>
+    <button onclick="printOrderInvoice()" style="background:#3498db; color:white; border:none; padding:5px 10px; margin-left:5px;">Cetak Invoice</button>
+    <button onclick="closeOrderDetail()" style="background:#e74c3c; color:white; border:none; padding:5px 10px;">Tutup</button>
+</div>
+
+</div> <!-- End admin-content -->
+
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -76,6 +144,86 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+// --- Auth Logic ---
+
+window.loginAdmin = async function() {
+    const email = document.getElementById('admin-email').value;
+    const pass = document.getElementById('admin-password').value;
+    try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        // onAuthStateChanged will handle UI update
+    } catch (error) {
+        document.getElementById('login-error').innerText = error.message;
+    }
+}
+
+window.logoutAdmin = function() {
+    signOut(auth);
+}
+
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        // --- PROTEKSI ADMIN ---
+        // GANTI "admin@tokokita.com" dengan email Anda sendiri untuk login pertama kali!
+        let allowedEmail = "support@servicekomputersurabaya.id"; 
+        
+        try {
+            // Cek apakah ada settingan email admin di database
+            const docRef = doc(db, "settings", "store_config");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().adminEmail) {
+                allowedEmail = docSnap.data().adminEmail;
+            }
+        } catch(e) { console.log("Config load error"); }
+
+        if (user.email !== allowedEmail) {
+            alert("AKSES DITOLAK: Akun " + user.email + " tidak memiliki izin Admin.");
+            signOut(auth); // Logout paksa
+            return;
+        }
+
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('admin-content').style.display = 'block';
+        loadProducts();
+        loadOrders(); // Load orders when logged in
+        loadSettings();
+    } else {
+        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('admin-content').style.display = 'none';
+    }
+});
+
+// --- Settings Logic ---
+
+window.loadSettings = async function() {
+    try {
+        const docRef = doc(db, "settings", "store_config");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            document.getElementById('set-store-name').value = data.storeName || "";
+            document.getElementById('set-admin-phone').value = data.adminPhone || "";
+            document.getElementById('set-admin-email').value = data.adminEmail || "";
+            document.getElementById('set-api-key').value = data.apiKey || "";
+        }
+    } catch (e) {
+        console.error("Gagal load settings:", e);
+    }
+}
+
+window.saveSettings = async function() {
+    const data = {
+        storeName: document.getElementById('set-store-name').value,
+        adminPhone: document.getElementById('set-admin-phone').value,
+        adminEmail: document.getElementById('set-admin-email').value,
+        apiKey: document.getElementById('set-api-key').value
+    };
+    
+    await setDoc(doc(db, "settings", "store_config"), data);
+    alert("Pengaturan berhasil disimpan!");
+}
 
 window.uploadCSV = async function(){
 
@@ -273,6 +421,206 @@ window.restoreData = async function() {
   }
 }
 
+// --- Fitur Daftar Pesanan ---
+
+window.ordersData = {};
+let currentOrderId = null;
+
+window.loadOrders = async function() {
+    const tbody = document.querySelector("#orderTable tbody");
+    tbody.innerHTML = "<tr><td colspan='5'>Memuat pesanan...</td></tr>";
+
+    try {
+        // Ambil data dari koleksi 'orders', urutkan berdasarkan createdAt desc (perlu index di firebase console mungkin)
+        // Untuk simplifikasi, kita ambil semua lalu sort di client side jika data sedikit
+        const querySnapshot = await getDocs(collection(db, "orders"));
+        tbody.innerHTML = "";
+        window.ordersData = {};
+
+        let orders = [];
+        querySnapshot.forEach((doc) => {
+            let data = doc.data();
+            data.id = doc.id;
+            orders.push(data);
+        });
+
+        // Sort by date descending (terbaru diatas)
+        orders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+        if (orders.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='5'>Belum ada pesanan.</td></tr>";
+            return;
+        }
+
+        orders.forEach(order => {
+            window.ordersData[order.id] = order;
+            const date = order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString('id-ID') : '-';
+            const row = `
+                <tr>
+                    <td>${date}</td>
+                    <td>${order.nama || '-'} <br><small style="color:#888">${order.invoiceNumber || order.id}</small></td>
+                    <td>Rp ${(order.total || 0).toLocaleString('id-ID')}</td>
+                    <td>${order.status || 'baru'}</td>
+                    <td>
+                        <button onclick="viewOrder('${order.id}')" class="btn btn-edit">Detail</button>
+                        <button onclick="deleteOrder('${order.id}')" class="btn btn-delete">Hapus</button>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = "<tr><td colspan='5'>Gagal memuat pesanan: " + e.message + "</td></tr>";
+    }
+}
+
+window.deleteOrder = async function(id) {
+    if(confirm("Yakin ingin menghapus pesanan ini?")) {
+        try {
+            await deleteDoc(doc(db, "orders", id));
+            loadOrders();
+        } catch(e) {
+            alert("Gagal menghapus pesanan: " + e.message);
+        }
+    }
+}
+
+window.viewOrder = function(id) {
+    currentOrderId = id;
+    const order = window.ordersData[id];
+    const content = document.getElementById('orderDetailContent');
+    
+    let itemsHtml = order.cart.map(item => `<li>${item.name} (${item.qty}x) - Rp ${item.price.toLocaleString('id-ID')}</li>`).join('');
+
+    content.innerHTML = `
+        <p><strong>No. Invoice:</strong> ${order.invoiceNumber || order.id}</p>
+        <p><strong>Nama:</strong> ${order.nama}</p>
+        <p><strong>HP:</strong> ${order.hp}</p>
+        <p><strong>Alamat:</strong> ${order.alamat}, ${order.kota || ''}</p>
+        <p><strong>Produk:</strong></p>
+        <ul>${itemsHtml}</ul>
+        <p><strong>Berat Total:</strong> ${order.totalWeight || '-'} Kg</p>
+        <p><strong>Kurir:</strong> ${order.courier || '-'}</p>
+        <p><strong>Subtotal:</strong> Rp ${(order.subtotal || 0).toLocaleString('id-ID')}</p>
+        <p><strong>Ongkir:</strong> Rp ${(order.ongkir || 0).toLocaleString('id-ID')}</p>
+        <p><strong>Total:</strong> Rp ${(order.total || 0).toLocaleString('id-ID')}</p>
+    `;
+
+    document.getElementById('orderAwbInput').value = order.awb || '';
+    document.getElementById('orderStatusSelect').value = order.status || 'baru';
+    document.getElementById('orderDetailModal').style.display = 'block';
+    document.getElementById('overlay').style.display = 'block';
+}
+
+window.updateOrderStatus = async function() {
+    if(!currentOrderId) return;
+    const newStatus = document.getElementById('orderStatusSelect').value;
+    const newAwb = document.getElementById('orderAwbInput').value;
+    
+    try {
+        await updateDoc(doc(db, "orders", currentOrderId), { 
+            status: newStatus,
+            awb: newAwb
+        });
+        alert("Status berhasil diupdate!");
+        closeOrderDetail();
+        loadOrders();
+    } catch(e) {
+        alert("Gagal update status: " + e.message);
+    }
+}
+
+window.closeOrderDetail = function() {
+    document.getElementById('orderDetailModal').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+}
+
+window.printOrderInvoice = function() {
+    if(!currentOrderId) return;
+    const order = window.ordersData[currentOrderId];
+    const invoiceNo = order.invoiceNumber || order.id; // Gunakan nomor kustom jika ada
+    
+    const date = order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
+    const itemsHtml = order.cart.map((item, i) => `
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${i + 1}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.qty}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">Rp ${item.price.toLocaleString('id-ID')}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</td>
+        </tr>
+    `).join('');
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Invoice #${invoiceNo}</title>
+        <style>
+            body { font-family: sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .info { margin-bottom: 30px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th { background: #f4f4f4; padding: 10px; border: 1px solid #ddd; font-weight: bold; }
+            .totals { text-align: right; margin-top: 20px; }
+            .totals p { margin: 5px 0; }
+            .footer { margin-top: 50px; text-align: center; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 20px; }
+            @media print { 
+                .no-print { display: none; }
+                @page { margin: 0; }
+                body { margin: 2cm; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h2>INVOICE</h2>
+            <p>Service Komputer Surabaya ID</p>
+        </div>
+        
+        <div class="info">
+            <p><strong>No. Order:</strong> #${invoiceNo}</p>
+            <p><strong>Tanggal:</strong> ${date}</p>
+            <p><strong>Kepada Yth:</strong> ${order.nama}</p>
+            <p><strong>No HP:</strong> ${order.hp}</p>
+            <p><strong>Alamat:</strong> ${order.alamat}, ${order.kota || ''}</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Produk</th>
+                    <th>Qty</th>
+                    <th>Harga Satuan</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${itemsHtml}
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <p>Subtotal: Rp ${(order.subtotal || 0).toLocaleString('id-ID')}</p>
+            <p>Total Berat: ${order.totalWeight || 0} Kg</p>
+            <p>Ongkir (${order.courier || '-'}): Rp ${(order.ongkir || 0).toLocaleString('id-ID')}</p>
+            <h3>Total: Rp ${(order.total || 0).toLocaleString('id-ID')}</h3>
+        </div>
+
+        <div class="no-print" style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print()" style="padding: 12px 24px; cursor: pointer; background: #2c3e50; color: white; border: none; border-radius: 4px; font-size: 16px;">Cetak / Simpan PDF</button>
+        </div>
+    </body>
+    </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(html);
+    printWindow.document.close();
+}
+
 // --- Fitur Edit & Hapus ---
 
 window.productsData = {}; // Simpan data produk di memori
@@ -366,16 +714,22 @@ window.searchTable = function() {
   const tr = table.getElementsByTagName("tr");
 
   for (let i = 1; i < tr.length; i++) {
-    const td = tr[i].getElementsByTagName("td")[0]; // Kolom Judul
-    if (td) {
-      const txtValue = td.textContent || td.innerText;
-      tr[i].style.display = txtValue.toLowerCase().indexOf(filter) > -1 ? "" : "none";
+    const tdTitle = tr[i].getElementsByTagName("td")[0]; // Kolom Judul
+    const tdCategory = tr[i].getElementsByTagName("td")[1]; // Kolom Kategori
+
+    if (tdTitle && tdCategory) {
+      const titleValue = tdTitle.textContent || tdTitle.innerText;
+      const categoryValue = tdCategory.textContent || tdCategory.innerText;
+      
+      // Cari di Judul ATAU Kategori
+      if (titleValue.toLowerCase().indexOf(filter) > -1 || categoryValue.toLowerCase().indexOf(filter) > -1) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
+      }
     }
   }
 }
-
-// Load data saat halaman dibuka
-loadProducts();
 
 </script>
 </body>

@@ -12,7 +12,14 @@
 
     <!-- Navbar -->
     <nav class="navbar">
-        <div class="logo" onclick="window.location.href='index.html'" style="cursor:pointer"><img src="assets/logo.png" alt="Service Komputer Surabaya"></div>
+        <div class="logo" onclick="window.location.href='index.html'" style="cursor:pointer">
+            <img src="assets/logo.png" alt="Service Komputer Surabaya">
+            <!--<span class="logo-tagline">Pusat Komputer & Aksesoris Terlengkap</span>-->
+        </div>
+        <div class="wishlist-icon" onclick="window.location.href='index.html'" style="margin-left: auto;">
+            <span class="material-icons">favorite</span>
+            <span id="wishlist-count">0</span>
+        </div>
         <div class="cart-icon" onclick="window.location.href='index.html'">
             <span class="material-icons">shopping_cart</span>
             <span id="cart-count">0</span>
@@ -46,6 +53,17 @@
                 <button id="btn-add-detail" class="btn-add" style="padding: 15px; font-size: 1.1rem;">
                     + Masukkan Keranjang
                 </button>
+                <button id="btn-wishlist-detail" class="btn-add" style="padding: 15px; font-size: 1.1rem; background: #e74c3c; margin-top: 10px;">
+                    <span class="material-icons" style="vertical-align: middle; font-size: 1.2rem;">favorite_border</span> Simpan ke Wishlist
+                </button>
+
+                <div class="share-container">
+                    <span class="share-label">Bagikan Produk:</span>
+                    <button onclick="shareTo('facebook')" class="btn-share share-fb" title="Facebook">FB</button>
+                    <button onclick="shareTo('twitter')" class="btn-share share-tw" title="Twitter (X)">X</button>
+                    <button onclick="shareTo('whatsapp')" class="btn-share share-wa" title="WhatsApp">WA</button>
+                    <button onclick="shareTo('copy')" class="btn-share share-copy" title="Salin Link"><span class="material-icons" style="font-size: 16px;">content_copy</span></button>
+                </div>
             </div>
         </div>
     </div>
@@ -63,6 +81,9 @@
         <span class="zoom-close">&times;</span>
         <img class="zoom-modal-content" id="img-zoom" onclick="event.stopPropagation()">
     </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -87,7 +108,9 @@
 
         let currentProduct = null;
         let cart = JSON.parse(localStorage.getItem("cart")) || [];
+        let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
         document.getElementById('cart-count').innerText = cart.reduce((acc, item) => acc + item.qty, 0);
+        document.getElementById('wishlist-count').innerText = wishlist.length;
 
         async function loadDetail() {
             if (!productId) {
@@ -125,6 +148,11 @@
                     } else {
                         thumbContainer.innerHTML = ''; // Kosongkan jika cuma 1 gambar
                     }
+
+                    // Update tombol wishlist jika sudah ada
+                    const isWishlist = wishlist.some(item => item.id === currentProduct.id);
+                    const wishBtn = document.getElementById('btn-wishlist-detail');
+                    if(isWishlist) wishBtn.innerHTML = '<span class="material-icons" style="vertical-align: middle; font-size: 1.2rem;">favorite</span> Tersimpan di Wishlist';
 
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('detail-content').style.display = 'grid';
@@ -212,12 +240,76 @@
             }
             localStorage.setItem("cart", JSON.stringify(cart));
             document.getElementById('cart-count').innerText = cart.reduce((acc, item) => acc + item.qty, 0);
-            alert("Produk berhasil ditambahkan ke keranjang!");
+            showToast("Produk berhasil ditambahkan ke keranjang!");
         }
 
         document.getElementById('btn-add-detail').addEventListener('click', () => {
             if (currentProduct) addToCart(currentProduct.id, currentProduct.name, currentProduct.price, currentProduct.image);
         });
+
+        // Logic Wishlist di Detail
+        document.getElementById('btn-wishlist-detail').addEventListener('click', () => {
+            if (!currentProduct) return;
+            const index = wishlist.findIndex(item => item.id === currentProduct.id);
+            const btn = document.getElementById('btn-wishlist-detail');
+
+            if (index > -1) {
+                if(!confirm("Hapus dari Wishlist?")) return; // Konfirmasi hapus di detail page
+                wishlist.splice(index, 1);
+                btn.innerHTML = '<span class="material-icons" style="vertical-align: middle; font-size: 1.2rem;">favorite_border</span> Simpan ke Wishlist';
+            } else {
+                wishlist.push(currentProduct);
+                btn.innerHTML = '<span class="material-icons" style="vertical-align: middle; font-size: 1.2rem;">favorite</span> Tersimpan di Wishlist';
+            }
+            localStorage.setItem("wishlist", JSON.stringify(wishlist));
+            document.getElementById('wishlist-count').innerText = wishlist.length;
+        });
+
+        // Toast Function (Duplikasi dari script.js agar mandiri di detail.html)
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => { toast.classList.add('show'); }, 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 3000);
+        }
+
+        // Share Function
+        window.shareTo = function(platform) {
+            const url = encodeURIComponent(window.location.href);
+            const title = document.getElementById('d-title').innerText || "Produk";
+            const text = encodeURIComponent(`Cek produk ${title} ini!`);
+            let shareUrl = "";
+
+            switch(platform) {
+                case 'facebook':
+                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+                    break;
+                case 'twitter':
+                    shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+                    break;
+                case 'whatsapp':
+                    shareUrl = `https://api.whatsapp.com/send?text=${text}%20${url}`;
+                    break;
+                case 'copy':
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(window.location.href).then(() => showToast("Link berhasil disalin!"));
+                    } else {
+                        showToast("Browser tidak mendukung salin otomatis.");
+                    }
+                    return;
+            }
+
+            if(shareUrl) {
+                window.open(shareUrl, '_blank', 'width=600,height=400');
+            }
+        }
 
         // Search Redirect
         document.getElementById('search-input').addEventListener('keypress', function (e) {
