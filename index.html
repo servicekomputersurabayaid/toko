@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toko Online</title>
+    <title>Toko Online - Service Komputer Surabaya ID</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="assets/logo-fav.png">
     <!-- Icon dari Google Fonts -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
@@ -12,18 +13,34 @@
 
     <!-- Navbar -->
     <nav class="navbar">
-        <div class="logo">TokoKita</div>
-        <div class="cart-icon" id="cart-btn">
-            <span class="material-icons">shopping_cart</span>
-            <span id="cart-count">0</span>
+        <div class="logo"><img src="assets/logo.png" alt="Service Komputer Surabaya"></div>
+        <div style="display:flex; gap:20px; align-items:center;">
+            <span style="cursor:pointer; font-weight:bold;" id="track-btn">Cek Resi</span>
+            <div class="cart-icon" id="cart-btn">
+                <span class="material-icons">shopping_cart</span>
+                <span id="cart-count">0</span>
+            </div>
         </div>
     </nav>
 
     <!-- Daftar Produk -->
     <div class="container">
         <h2>Katalog Produk</h2>
-        <div id="product-list" class="product-grid">
-            <p style="text-align:center; width:100%;">Memuat produk...</p>
+        <input type="text" id="search-input" class="search-box" placeholder="Cari produk...">
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start;">
+            <!-- Area Produk (Kiri) -->
+            <div id="product-list" style="flex: 1; min-width: 0;">
+                <p style="text-align:center; width:100%;">Memuat produk...</p>
+            </div>
+
+            <!-- Sidebar Kategori (Kanan) -->
+            <div style="width: 250px; flex-shrink: 0;">
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: sticky; top: 90px;">
+                    <h3 style="margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.1rem; color: #2c3e50;">Kategori</h3>
+                    <ul id="category-list" style="list-style: none; padding: 0;"></ul>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -41,23 +58,69 @@
                 <input type="tel" id="phone" placeholder="No. WhatsApp" required>
                 <textarea id="address" placeholder="Alamat Lengkap" rows="3" required></textarea>
                 
+                <label>Provinsi:</label>
+                <select id="provinsi">
+                    <option value="">Pilih Provinsi</option>
+                </select>
+
+                <label>Kabupaten / Kota:</label>
+                <select id="kabupaten" disabled>
+                    <option value="">Pilih Kabupaten/Kota</option>
+                </select>
+
+                <label>Kecamatan:</label>
+                <select id="kecamatan" disabled>
+                    <option value="">Pilih Kecamatan</option>
+                </select>
+
+                <label>Kelurahan / Desa:</label>
+                <select id="kelurahan" disabled>
+                    <option value="">Pilih Kelurahan/Desa</option>
+                </select>
+
                 <label>Pilih Kurir:</label>
                 <select id="courier">
-                    <option value="jne">JNE (Rp 10.000)</option>
-                    <option value="pos">POS (Rp 12.000)</option>
-                    <option value="tiki">TIKI (Rp 15.000)</option>
+                    <option value="">Pilih Kurir</option>
+                </select>
+
+                <label>Metode Order:</label>
+                <select id="order-method">
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="print">Cetak Penawaran (Print/PDF)</option>
                 </select>
 
                 <div class="summary">
                     <p>Subtotal: <span id="subtotal">Rp 0</span></p>
+                    <p>Total Berat: <span id="total-weight">0 Kg</span></p>
                     <p>Ongkir: <span id="shipping-cost">Rp 0</span></p>
                     <p class="total">Total: <span id="grand-total">Rp 0</span></p>
                 </div>
 
-                <button id="btn-wa" class="btn-wa">
-                    <span class="material-icons">whatsapp</span> Order via WhatsApp
+                <button id="btn-checkout" class="btn-wa">
+                    <span class="material-icons">send</span> Proses Order
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Cek Resi -->
+    <div id="track-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-track">&times;</span>
+            <h2>Lacak Paket</h2>
+            <div class="checkout-form">
+                <select id="track-courier">
+                    <option value="">Pilih Kurir</option>
+                    <option value="jne">JNE</option>
+                    <option value="pos">POS Indonesia</option>
+                    <option value="tiki">TIKI</option>
+                    <option value="sicepat">SiCepat</option>
+                    <option value="jnt">J&T</option>
+                </select>
+                <input type="text" id="track-awb" placeholder="Masukkan Nomor Resi">
+                <button id="btn-track" class="btn-wa" style="background:#3498db;">Lacak Sekarang</button>
+            </div>
+            <div id="track-result" style="margin-top:20px;"></div>
         </div>
     </div>
 

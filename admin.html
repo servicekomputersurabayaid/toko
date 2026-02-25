@@ -1,7 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Upload CSV</title>
+  <title>Admin-Data Produk Service Komputer Surabaya ID</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .btn { padding: 5px 10px; cursor: pointer; margin-right: 5px; }
+    .btn-edit { background-color: #ffc107; border: none; }
+    .btn-delete { background-color: #f44336; color: white; border: none; }
+    #editForm { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; box-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 1000; width: 400px; }
+    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+    input, textarea { width: 100%; margin-bottom: 10px; padding: 5px; box-sizing: border-box; }
+    .search-admin { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; }
+  </style>
 </head>
 <body>
 
@@ -10,13 +22,47 @@
 <input type="file" id="csvFile" accept=".csv">
 <br><br>
 <button onclick="uploadCSV()">Upload</button>
+<button onclick="exportCSV()">Download CSV (Export)</button>
+<button onclick="deleteAllProducts()" style="background-color: #d32f2f; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Hapus Semua Data</button>
+<button onclick="restoreData()" style="background-color: #2196F3; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Restore Data Terakhir</button>
 
 <p id="status"></p>
+
+<hr>
+<h3>Daftar Produk</h3>
+<input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Cari nama produk..." class="search-admin">
+<table id="productTable">
+  <thead>
+    <tr>
+      <th>Judul</th>
+      <th>Kategori</th>
+      <th>Harga</th>
+      <th>Aksi</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<!-- Edit Form Modal -->
+<div id="overlay"></div>
+<div id="editForm">
+  <h3>Edit Produk</h3>
+  <input type="hidden" id="editId">
+  <label>Judul:</label><input type="text" id="editJudul">
+  <label>Harga:</label><input type="number" id="editHarga">
+  <label>Kategori:</label><input type="text" id="editKategori" placeholder="Contoh: Laptop, Aksesoris">
+  <label>Berat (gram):</label><input type="number" id="editBerat">
+  <label>Image URL:</label><input type="text" id="editImage">
+  <label>Deskripsi Singkat:</label><input type="text" id="editDescShort">
+  <label>Deskripsi Panjang:</label><textarea id="editDescLong"></textarea>
+  <button onclick="saveEdit()">Simpan</button>
+  <button onclick="cancelEdit()">Batal</button>
+</div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -41,10 +87,24 @@ window.uploadCSV = async function(){
     return;
   }
 
+  status.innerHTML = "Sedang memproses...";
+
+  try {
   const file = fileInput.files[0];
   const text = await file.text();
 
   const rows = text.split("\n").filter(r => r.trim());
+
+  // Fungsi untuk membersihkan HTML tags dari deskripsi
+  const cleanHTML = (str) => {
+    if (!str) return "";
+    // Decode entities jika ada (misal &lt; menjadi <)
+    let txt = str.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+    // Ganti <br> dengan baris baru
+    txt = txt.replace(/<br\s*\/?>/gi, "\n");
+    // Hapus semua tag HTML lainnya
+    return txt.replace(/<[^>]*>/g, "").trim();
+  };
 
   // Fungsi regex untuk memisahkan CSV (handle koma dalam tanda kutip)
   const splitCSV = (str) => {
@@ -70,22 +130,252 @@ window.uploadCSV = async function(){
       data[h] = cols[index] || "";
     });
 
+    // Handle Multiple Images (Split by |)
+    const rawImg = data.image_url || "";
+    const imgList = rawImg.split("|").map(s => s.trim()).filter(s => s);
+
     await addDoc(collection(db,"products"),{
       judul: data.judul || "",
-      deskripsi_singkat: data.deskripsi_singkat || "",
-      deskripsi_panjang: data.deskripsi_panjang || "",
+      deskripsi_singkat: cleanHTML(data.deskripsi_singkat || ""),
+      deskripsi_panjang: cleanHTML(data.deskripsi_panjang || ""),
       harga: parseInt(data.harga) || 0,
       harga_diskon: parseInt(data.harga_diskon) || 0,
-      image_url: data.image_url || "",
+      kategori: data.kategori || "Umum",
+      berat: parseInt(data.berat) || 1000, // Default 1000 gram jika kosong
+      image_url: imgList[0] || "", // Gambar pertama sebagai cover utama
+      images: imgList, // Simpan semua gambar dalam array
       active: true,
       createdAt: new Date()
     });
 
     success++;
+    status.innerHTML = "Mengupload produk ke-" + success;
   }
 
   status.innerHTML = "Upload selesai. Total produk: " + success;
+  loadProducts(); // Refresh list after upload
+  } catch (error) {
+    console.error(error);
+    status.innerHTML = "Gagal: " + error.message;
+  }
 }
+
+window.exportCSV = async function() {
+  const status = document.getElementById("status");
+  status.innerHTML = "Sedang mengekspor data...";
+
+  try {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    
+    // Header CSV yang sesuai dengan format upload (agar bisa di-import lagi)
+    const headers = ["judul", "kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon"];
+    let csvContent = headers.join(",") + "\n";
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      const row = headers.map(fieldName => {
+        // Ambil data. Jika 'judul' kosong, coba ambil 'name' (untuk data lama)
+        let val = data[fieldName];
+        if(fieldName === 'judul' && !val) val = data.name;
+
+        // Handle Multiple Images untuk Export
+        if(fieldName === 'image_url') {
+            val = (data.images && data.images.length > 0) ? data.images.join(" | ") : (data.image_url || "");
+        }
+        
+        // Format CSV: Escape tanda kutip dua (") menjadi ("") dan bungkus dengan kutip jika ada koma/enter
+        val = String(val || "").replace(/"/g, '""');
+        if (val.search(/("|,|\n)/g) >= 0) {
+          val = `"${val}"`;
+        }
+        return val;
+      });
+      csvContent += row.join(",") + "\n";
+    });
+
+    // Buat file blob dan download otomatis
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "data_produk_tokoonline.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    status.innerHTML = "Export berhasil! File terunduh.";
+  } catch (error) {
+    console.error(error);
+    status.innerHTML = "Gagal export: " + error.message;
+  }
+}
+
+window.deleteAllProducts = async function() {
+  if(!confirm("PERINGATAN: Apakah Anda yakin ingin MENGHAPUS SEMUA DATA PRODUK? \n\nTindakan ini tidak dapat dibatalkan! Pastikan Anda sudah melakukan Export/Backup jika diperlukan.")) {
+    return;
+  }
+
+  const status = document.getElementById("status");
+  status.innerHTML = "Sedang menghapus semua data...";
+
+  try {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    
+    // AUTO BACKUP KE BROWSER (LocalStorage) SEBELUM HAPUS
+    const backupData = [];
+    querySnapshot.forEach((doc) => backupData.push(doc.data()));
+    if(backupData.length > 0) {
+        localStorage.setItem("backup_restore_point", JSON.stringify(backupData));
+    }
+
+    const deletePromises = [];
+    
+    querySnapshot.forEach((docSnapshot) => {
+      deletePromises.push(deleteDoc(docSnapshot.ref));
+    });
+
+    await Promise.all(deletePromises);
+
+    status.innerHTML = "Semua data berhasil dihapus.";
+    loadProducts();
+  } catch (error) {
+    console.error(error);
+    status.innerHTML = "Gagal menghapus data: " + error.message;
+  }
+}
+
+window.restoreData = async function() {
+  const raw = localStorage.getItem("backup_restore_point");
+  if(!raw) {
+    alert("Tidak ada data backup otomatis yang ditemukan di browser ini.");
+    return;
+  }
+
+  const data = JSON.parse(raw);
+  if(!confirm(`Ditemukan ${data.length} produk dari penghapusan terakhir. Apakah Anda ingin me-restore (mengembalikan) data ini?`)) return;
+
+  const status = document.getElementById("status");
+  status.innerHTML = "Sedang merestore data...";
+
+  try {
+    let count = 0;
+    for(const item of data) {
+        await addDoc(collection(db, "products"), item);
+        count++;
+        status.innerHTML = `Mengembalikan produk ke-${count} dari ${data.length}`;
+    }
+    status.innerHTML = "Restore selesai! Total: " + count;
+    loadProducts();
+  } catch(e) {
+    console.error(e);
+    status.innerHTML = "Gagal restore: " + e.message;
+  }
+}
+
+// --- Fitur Edit & Hapus ---
+
+window.productsData = {}; // Simpan data produk di memori
+
+async function loadProducts() {
+  const tbody = document.querySelector("#productTable tbody");
+  tbody.innerHTML = "<tr><td colspan='3'>Memuat...</td></tr>";
+  
+  try {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    tbody.innerHTML = "";
+    window.productsData = {}; // Reset data
+    
+    querySnapshot.forEach((doc) => {
+      const p = doc.data();
+      window.productsData[doc.id] = p; // Simpan untuk keperluan edit
+      
+      const row = `
+        <tr>
+          <td>${p.judul || p.name || '-'}</td>
+          <td>${p.kategori || 'Umum'}</td>
+          <td>Rp ${p.harga}</td>
+          <td>
+            <button class="btn btn-edit" onclick="editProduct('${doc.id}')">Edit</button>
+            <button class="btn btn-delete" onclick="deleteProduct('${doc.id}')">Hapus</button>
+          </td>
+        </tr>
+      `;
+      tbody.innerHTML += row;
+    });
+  } catch (e) {
+    console.error(e);
+    tbody.innerHTML = "<tr><td colspan='3'>Gagal memuat data: " + e.message + "</td></tr>";
+  }
+}
+
+window.deleteProduct = async function(id) {
+  if(confirm("Yakin ingin menghapus produk ini?")) {
+    await deleteDoc(doc(db, "products", id));
+    loadProducts();
+  }
+}
+
+window.editProduct = function(id) {
+  const p = window.productsData[id];
+  if(!p) return;
+
+  document.getElementById("editId").value = id;
+  document.getElementById("editJudul").value = p.judul || p.name || "";
+  document.getElementById("editHarga").value = p.harga || 0;
+  document.getElementById("editKategori").value = p.kategori || "Umum";
+  document.getElementById("editBerat").value = p.berat || 1000;
+  document.getElementById("editImage").value = (p.images && p.images.length > 0) ? p.images.join(" | ") : (p.image_url || "");
+  document.getElementById("editDescShort").value = p.deskripsi_singkat || "";
+  document.getElementById("editDescLong").value = p.deskripsi_panjang || "";
+  
+  document.getElementById("editForm").style.display = "block";
+  document.getElementById("overlay").style.display = "block";
+}
+
+window.saveEdit = async function() {
+  const id = document.getElementById("editId").value;
+  const rawImg = document.getElementById("editImage").value;
+  const imgList = rawImg.split("|").map(s => s.trim()).filter(s => s);
+
+  const updateData = {
+    judul: document.getElementById("editJudul").value,
+    harga: parseInt(document.getElementById("editHarga").value),
+    kategori: document.getElementById("editKategori").value,
+    berat: parseInt(document.getElementById("editBerat").value),
+    image_url: imgList[0] || "",
+    images: imgList,
+    deskripsi_singkat: document.getElementById("editDescShort").value,
+    deskripsi_panjang: document.getElementById("editDescLong").value
+  };
+  
+  await updateDoc(doc(db, "products", id), updateData);
+  cancelEdit();
+  loadProducts();
+}
+
+window.cancelEdit = function() {
+  document.getElementById("editForm").style.display = "none";
+  document.getElementById("overlay").style.display = "none";
+}
+
+window.searchTable = function() {
+  const input = document.getElementById("searchInput");
+  const filter = input.value.toLowerCase();
+  const table = document.getElementById("productTable");
+  const tr = table.getElementsByTagName("tr");
+
+  for (let i = 1; i < tr.length; i++) {
+    const td = tr[i].getElementsByTagName("td")[0]; // Kolom Judul
+    if (td) {
+      const txtValue = td.textContent || td.innerText;
+      tr[i].style.display = txtValue.toLowerCase().indexOf(filter) > -1 ? "" : "none";
+    }
+  }
+}
+
+// Load data saat halaman dibuka
+loadProducts();
 
 </script>
 </body>

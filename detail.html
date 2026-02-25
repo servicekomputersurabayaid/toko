@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Produk - Service Komputer Surabaya ID</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="assets/logo-fav.png">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo" onclick="window.location.href='index.html'" style="cursor:pointer"><img src="assets/logo.png" alt="Service Komputer Surabaya"></div>
+        <div class="cart-icon" onclick="window.location.href='index.html'">
+            <span class="material-icons">shopping_cart</span>
+            <span id="cart-count">0</span>
+        </div>
+    </nav>
+
+    <!-- Konten Detail -->
+    <div class="detail-container">
+        <a href="index.html" style="text-decoration: none; color: #666; display: inline-block; margin-bottom: 20px;">&larr; Kembali ke Katalog</a>
+        <input type="text" id="search-input" class="search-box" placeholder="Cari produk lain... (Tekan Enter)">
+        
+        <div id="loading" style="text-align: center; padding: 50px;">Memuat detail produk...</div>
+        
+        <div id="detail-content" class="detail-grid" style="display: none;">
+            <!-- Gambar -->
+            <div>
+                <img id="d-image" src="" alt="" class="detail-img" onclick="openZoom()">
+                <div id="d-thumbnails" class="thumbnail-container"></div>
+            </div>
+            
+            <!-- Info -->
+            <div class="detail-info">
+                <h1 id="d-title">Nama Produk</h1>
+                <div id="d-price" class="detail-price">Rp 0</div>
+                
+                <div class="detail-desc">
+                    <h3>Deskripsi:</h3>
+                    <p id="d-desc">Keterangan produk...</p>
+                </div>
+
+                <button id="btn-add-detail" class="btn-add" style="padding: 15px; font-size: 1.1rem;">
+                    + Masukkan Keranjang
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Produk Lainnya -->
+    <div class="container" style="margin-top: 40px; margin-bottom: 40px;">
+        <h3 style="margin-bottom: 20px; color: #2c3e50;">Produk Lainnya</h3>
+        <div id="related-products" class="product-grid">
+            <p>Memuat produk lainnya...</p>
+        </div>
+    </div>
+
+    <!-- Zoom Modal -->
+    <div id="zoom-modal" class="zoom-modal" onclick="closeZoom()">
+        <span class="zoom-close">&times;</span>
+        <img class="zoom-modal-content" id="img-zoom" onclick="event.stopPropagation()">
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
+            authDomain: "servicekomputersurabaya.firebaseapp.com",
+            projectId: "servicekomputersurabaya",
+            storageBucket: "servicekomputersurabaya.firebasestorage.app",
+            messagingSenderId: "985678673202",
+            appId: "1:985678673202:web:4ab14bfb82fc3dee4ad32b",
+            measurementId: "G-12RJTSNG7S"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Ambil ID dari URL (?id=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        let currentProduct = null;
+        let cart = JSON.parse(localStorage.getItem("cart")) || [];
+        document.getElementById('cart-count').innerText = cart.reduce((acc, item) => acc + item.qty, 0);
+
+        async function loadDetail() {
+            if (!productId) {
+                document.getElementById('loading').innerText = "Produk tidak ditemukan.";
+                return;
+            }
+
+            try {
+                const docRef = doc(db, "products", productId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    currentProduct = {
+                        id: docSnap.id,
+                        name: data.judul || data.name,
+                        price: parseInt(data.harga || data.price),
+                        image: data.image_url,
+                        images: data.images || [data.image_url], // Ambil array images atau fallback ke single image
+                        description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi."
+                    };
+
+                    // Render ke HTML
+                    document.getElementById('d-image').src = currentProduct.image;
+                    document.getElementById('d-title').innerText = currentProduct.name;
+                    document.getElementById('d-price').innerText = "Rp " + currentProduct.price.toLocaleString('id-ID');
+                    document.getElementById('d-desc').innerText = currentProduct.description;
+
+                    // Render Thumbnails
+                    const thumbContainer = document.getElementById('d-thumbnails');
+                    if (currentProduct.images.length > 1) {
+                        thumbContainer.innerHTML = currentProduct.images.map((img, index) => `
+                            <img src="${img}" class="thumbnail ${index === 0 ? 'active' : ''}" onclick="changeMainImage(this, '${img}')">
+                        `).join('');
+                    } else {
+                        thumbContainer.innerHTML = ''; // Kosongkan jika cuma 1 gambar
+                    }
+
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('detail-content').style.display = 'grid';
+                    loadRelatedProducts(currentProduct.id);
+                } else {
+                    document.getElementById('loading').innerText = "Produk tidak ditemukan di database.";
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loading').innerText = "Terjadi kesalahan memuat data.";
+            }
+        }
+
+        // Fungsi Ganti Gambar Utama
+        window.changeMainImage = function(el, src) {
+            document.getElementById('d-image').src = src;
+            document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // Zoom Functions
+        window.openZoom = function() {
+            const modal = document.getElementById("zoom-modal");
+            const modalImg = document.getElementById("img-zoom");
+            const mainImg = document.getElementById("d-image");
+            modal.style.display = "block";
+            modalImg.src = mainImg.src;
+        }
+        window.closeZoom = function() {
+            document.getElementById("zoom-modal").style.display = "none";
+        }
+
+        async function loadRelatedProducts(currentId) {
+            const relatedContainer = document.getElementById('related-products');
+            try {
+                // Ambil 5 produk dari database
+                const q = query(collection(db, "products"), limit(5));
+                const querySnapshot = await getDocs(q);
+                
+                let html = "";
+                querySnapshot.forEach((doc) => {
+                    // Jangan tampilkan produk yang sedang dibuka
+                    if(doc.id === currentId) return;
+
+                    const p = doc.data();
+                    const name = p.judul || p.name || "Produk";
+                    const price = parseInt(p.harga || p.price || 0);
+                    const image = p.image_url || "https://via.placeholder.com/150";
+
+                    html += `
+                        <div class="product-card">
+                            <div onclick="window.location.href='detail.html?id=${doc.id}'" style="cursor:pointer">
+                                <img src="${image}" alt="${name}" class="product-img">
+                            </div>
+                            <div class="product-info">
+                                <h3 class="product-title" onclick="window.location.href='detail.html?id=${doc.id}'" style="cursor:pointer">${name}</h3>
+                                <p class="product-price">Rp ${price.toLocaleString('id-ID')}</p>
+                                <button class="btn-add btn-related" data-id="${doc.id}" data-name="${name}" data-price="${price}" data-image="${image}">
+                                    + Keranjang
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                relatedContainer.innerHTML = html;
+
+                // Event listener untuk tombol di produk terkait
+                relatedContainer.querySelectorAll('.btn-related').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        addToCart(this.dataset.id, this.dataset.name, parseInt(this.dataset.price), this.dataset.image);
+                    });
+                });
+            } catch (e) {
+                console.error("Gagal load related:", e);
+                relatedContainer.innerHTML = "<p>Gagal memuat produk lain.</p>";
+            }
+        }
+
+        function addToCart(id, name, price, image) {
+            const existingItem = cart.find(item => item.id === id);
+            if (existingItem) {
+                existingItem.qty++;
+            } else {
+                cart.push({ id, name, price, image, qty: 1 });
+            }
+            localStorage.setItem("cart", JSON.stringify(cart));
+            document.getElementById('cart-count').innerText = cart.reduce((acc, item) => acc + item.qty, 0);
+            alert("Produk berhasil ditambahkan ke keranjang!");
+        }
+
+        document.getElementById('btn-add-detail').addEventListener('click', () => {
+            if (currentProduct) addToCart(currentProduct.id, currentProduct.name, currentProduct.price, currentProduct.image);
+        });
+
+        // Search Redirect
+        document.getElementById('search-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                window.location.href = 'index.html?q=' + encodeURIComponent(this.value);
+            }
+        });
+
+        loadDetail();
+    </script>
+</body>
+</html>
