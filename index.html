@@ -272,6 +272,16 @@
         </div>
     </div>
 
+    <!-- Custom Alert Modal -->
+    <div id="custom-alert-modal" class="modal" style="z-index: 9999;">
+        <div class="modal-content" style="max-width: 350px; text-align: center; padding: 20px;">
+            <span class="close-btn" onclick="document.getElementById('custom-alert-modal').style.display='none'">&times;</span>
+            <h3 style="margin-top: 0; color: #333;">Notifikasi</h3>
+            <p id="custom-alert-message" style="margin: 20px 0; color: #555; font-size: 1rem; white-space: pre-line;"></p>
+            <button onclick="document.getElementById('custom-alert-modal').style.display='none'" class="btn-wa" style="background:#3498db; width:100%; justify-content: center;">OK</button>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toast-container"></div>
 

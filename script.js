@@ -432,7 +432,7 @@ function calculateTotal() {
 
 async function processCheckout() {
     if (!currentUser) {
-        alert("Silakan login terlebih dahulu untuk melanjutkan checkout agar pesanan tercatat di riwayat Anda.");
+        showAlert("Silakan login terlebih dahulu untuk melanjutkan checkout agar pesanan tercatat di riwayat Anda.");
         document.getElementById('login-modal').style.display = 'block';
         return;
     }
@@ -465,7 +465,7 @@ async function processCheckout() {
     const fullAddress = `${address}, ${kel}, ${kec}, ${kab}, ${prov}`;
 
     if (!name || !phone || !address || !prov || !kab || !kec) {
-        alert("Mohon lengkapi data diri Anda!");
+        showAlert("Mohon lengkapi data diri Anda!");
         return;
     }
 
@@ -561,7 +561,7 @@ Terima kasih!`;
         });
     } catch (e) {
         console.error("Gagal menyimpan pesanan ke database: ", e);
-        alert("Gagal menyimpan pesanan ke database: " + e.message + "\nCek Security Rules di Firebase Console.");
+        showAlert("Gagal menyimpan pesanan ke database: " + e.message + "\nCek Security Rules di Firebase Console.");
     }
 
     if (orderMethod === 'whatsapp') {
@@ -883,7 +883,7 @@ async function trackPackage() {
     const resultDiv = document.getElementById('track-result');
 
     if(!courier || !awb) {
-        alert("Pilih kurir dan masukkan nomor resi");
+        showAlert("Pilih kurir dan masukkan nomor resi");
         return;
     }
 
@@ -1059,17 +1059,17 @@ document.getElementById('btn-submit-login').addEventListener('click', async () =
     try {
         if(isRegisterMode) {
             await createUserWithEmailAndPassword(auth, email, pass);
-            alert("Pendaftaran berhasil! Silakan isi data pengiriman saat checkout.");
+            showAlert("Pendaftaran berhasil! Silakan isi data pengiriman saat checkout.");
         } else {
             await signInWithEmailAndPassword(auth, email, pass);
-            alert("Login berhasil!");
+            showAlert("Login berhasil!");
         }
         loginModal.style.display = 'none';
     } catch (error) {
         if (error.code === 'auth/operation-not-allowed') {
-            alert("Error: Metode login ini belum diaktifkan di Firebase Console.");
+            showAlert("Error: Metode login ini belum diaktifkan di Firebase Console.");
         } else {
-            alert("Error: " + error.message);
+            showAlert("Error: " + error.message);
         }
     }
 });
@@ -1079,14 +1079,14 @@ document.getElementById('forgot-password').addEventListener('click', async (e) =
     e.preventDefault();
     const email = document.getElementById('login-email').value;
     if (!email) {
-        alert("Silakan isi kolom Email terlebih dahulu untuk mereset password.");
+        showAlert("Silakan isi kolom Email terlebih dahulu untuk mereset password.");
         return;
     }
     try {
         await sendPasswordResetEmail(auth, email);
-        alert(`Link reset password telah dikirim ke ${email}. Silakan cek email Anda.`);
+        showAlert(`Link reset password telah dikirim ke ${email}. Silakan cek email Anda.`);
     } catch (error) {
-        alert("Gagal mengirim reset password: " + error.message);
+        showAlert("Gagal mengirim reset password: " + error.message);
     }
 });
 
@@ -1170,6 +1170,12 @@ window.showToast = function(message) {
         toast.classList.remove('show');
         setTimeout(() => { toast.remove(); }, 300);
     }, 3000);
+}
+
+// Custom Alert Function
+window.showAlert = function(message) {
+    document.getElementById('custom-alert-message').innerText = message;
+    document.getElementById('custom-alert-modal').style.display = 'block';
 }
 
 // Init
