@@ -427,6 +427,12 @@ function calculateTotal() {
 }
 
 async function processCheckout() {
+    if (!currentUser) {
+        alert("Silakan login terlebih dahulu untuk melanjutkan checkout agar pesanan tercatat di riwayat Anda.");
+        document.getElementById('login-modal').style.display = 'block';
+        return;
+    }
+
     const name = document.getElementById('name').value;
     const phone = document.getElementById('phone').value;
     const address = document.getElementById('address').value;
