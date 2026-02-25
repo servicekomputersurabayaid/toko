@@ -44,17 +44,30 @@ window.uploadCSV = async function(){
   const file = fileInput.files[0];
   const text = await file.text();
 
-  const rows = text.split("\n").map(r => r.trim()).filter(r => r);
-  const headers = rows[0].split(",");
+  const rows = text.split("\n").filter(r => r.trim());
+
+  // Fungsi regex untuk memisahkan CSV (handle koma dalam tanda kutip)
+  const splitCSV = (str) => {
+    return str.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(val => {
+      val = val.trim();
+      // Hapus tanda kutip pembungkus jika ada
+      if (val.startsWith('"') && val.endsWith('"')) {
+        val = val.slice(1, -1).replace(/""/g, '"');
+      }
+      return val;
+    });
+  };
+
+  const headers = splitCSV(rows[0]);
 
   let success = 0;
 
   for(let i=1; i<rows.length; i++){
-    const cols = rows[i].split(",");
+    const cols = splitCSV(rows[i]);
 
     let data = {};
     headers.forEach((h,index)=>{
-      data[h.trim()] = cols[index] ? cols[index].trim() : "";
+      data[h] = cols[index] || "";
     });
 
     await addDoc(collection(db,"products"),{
