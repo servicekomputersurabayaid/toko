@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Upload CSV</title>
+</head>
+<body>
+
+<h2>Upload Produk via CSV</h2>
+
+<input type="file" id="csvFile" accept=".csv">
+<br><br>
+<button onclick="uploadCSV()">Upload</button>
+
+<p id="status"></p>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
+  authDomain: "servicekomputersurabaya.firebaseapp.com",
+  projectId: "servicekomputersurabaya",
+  storageBucket: "servicekomputersurabaya.firebasestorage.app",
+  messagingSenderId: "985678673202",
+  appId: "1:985678673202:web:4ab14bfb82fc3dee4ad32b",
+  measurementId: "G-12RJTSNG7S"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.uploadCSV = async function(){
+
+  const fileInput = document.getElementById("csvFile");
+  const status = document.getElementById("status");
+
+  if(!fileInput.files.length){
+    alert("Pilih file CSV dulu");
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const text = await file.text();
+
+  const rows = text.split("\n").map(r => r.trim()).filter(r => r);
+  const headers = rows[0].split(",");
+
+  let success = 0;
+
+  for(let i=1; i<rows.length; i++){
+    const cols = rows[i].split(",");
+
+    let data = {};
+    headers.forEach((h,index)=>{
+      data[h.trim()] = cols[index] ? cols[index].trim() : "";
+    });
+
+    await addDoc(collection(db,"products"),{
+      judul: data.judul,
+      deskripsi_singkat: data.deskripsi_singkat,
+      deskripsi_panjang: data.deskripsi_panjang,
+      harga: parseInt(data.harga) || 0,
+      harga_diskon: parseInt(data.harga_diskon) || 0,
+      image_url: data.image_url,
+      active: true,
+      createdAt: new Date()
+    });
+
+    success++;
+  }
+
+  status.innerHTML = "Upload selesai. Total produk: " + success;
+}
+
+</script>
+</body>
+</html>

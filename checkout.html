@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Checkout</title>
+  <script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
+  authDomain: "servicekomputersurabaya.firebaseapp.com",
+  projectId: "servicekomputersurabaya",
+  storageBucket: "servicekomputersurabaya.firebasestorage.app",
+  messagingSenderId: "985678673202",
+  appId: "1:985678673202:web:4ab14bfb82fc3dee4ad32b",
+  measurementId: "G-12RJTSNG7S"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+window.kirimPesanan = async function(){
+
+  const nama = document.getElementById("nama").value;
+  const hp = document.getElementById("hp").value;
+  const alamat = document.getElementById("alamat").value;
+  const kota = document.getElementById("kota").value;
+
+  let subtotal = 0;
+  cart.forEach(i=> subtotal += i.price * i.qty);
+
+  let ongkir = 0;
+  if(kota === "Surabaya") ongkir = 10000;
+  if(kota === "Sidoarjo") ongkir = 15000;
+
+  let total = subtotal + ongkir;
+
+  await addDoc(collection(db,"orders"),{
+    nama, hp, alamat, kota,
+    cart, subtotal, ongkir, total,
+    status: "baru",
+    createdAt: new Date()
+  });
+
+  let pesan = `Halo Admin,%0A%0ASaya ingin order:%0A`;
+
+  cart.forEach(i=>{
+    pesan += `- ${i.name}%0A`;
+  });
+
+  pesan += `%0ATotal: Rp ${total}%0A`;
+  pesan += `Nama: ${nama}%0AAlamat: ${alamat}`;
+
+  window.location.href =
+    `https://wa.me/628XXXXXXXXXX?text=${pesan}`;
+
+}
+
+</script>
+</head>
+<body>
+
+<h2>Checkout</h2>
+
+<input id="nama" placeholder="Nama"><br><br>
+<input id="hp" placeholder="No HP"><br><br>
+<textarea id="alamat" placeholder="Alamat"></textarea><br><br>
+
+<select id="kota">
+  <option>Surabaya</option>
+  <option>Sidoarjo</option>
+</select>
+
+<br><br>
+<button onclick="kirimPesanan()">Kirim Pesanan</button>
+
+</body>
+</html>
