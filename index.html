@@ -28,19 +28,12 @@
         <h2>Katalog Produk</h2>
         <input type="text" id="search-input" class="search-box" placeholder="Cari produk...">
         
-        <div style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start;">
-            <!-- Area Produk (Kiri) -->
-            <div id="product-list" style="flex: 1; min-width: 0;">
-                <p style="text-align:center; width:100%;">Memuat produk...</p>
-            </div>
+        <!-- Menu Kategori Horizontal -->
+        <div id="category-list" class="category-menu"></div>
 
-            <!-- Sidebar Kategori (Kanan) -->
-            <div style="width: 250px; flex-shrink: 0;">
-                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: sticky; top: 90px;">
-                    <h3 style="margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.1rem; color: #2c3e50;">Kategori</h3>
-                    <ul id="category-list" style="list-style: none; padding: 0;"></ul>
-                </div>
-            </div>
+        <!-- Area Produk -->
+        <div id="product-list">
+            <p style="text-align:center; width:100%;">Memuat produk...</p>
         </div>
     </div>
 

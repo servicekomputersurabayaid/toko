@@ -68,16 +68,21 @@ function renderCategories(categories) {
     const list = document.getElementById('category-list');
     if(!list) return;
     
-    let html = `<li style="margin-bottom: 5px;"><a href="#" onclick="filterCategory('all'); return false;" style="text-decoration: none; color: #2c3e50; display: block; padding: 8px; border-radius: 4px; border: 1px solid transparent;" onmouseover="this.style.backgroundColor='#f8f9fa'; this.style.borderColor='#eee'" onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='transparent'">Semua Produk</a></li>`;
+    let html = `<a href="#" onclick="filterCategory('all', this); return false;" class="cat-link active">Semua Produk</a>`;
     
     categories.forEach(cat => {
-        html += `<li style="margin-bottom: 5px;"><a href="#" onclick="filterCategory('${cat}'); return false;" style="text-decoration: none; color: #2c3e50; display: block; padding: 8px; border-radius: 4px; border: 1px solid transparent;" onmouseover="this.style.backgroundColor='#f8f9fa'; this.style.borderColor='#eee'" onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='transparent'">${cat}</a></li>`;
+        html += `<a href="#" onclick="filterCategory('${cat}', this); return false;" class="cat-link">${cat}</a>`;
     });
     
     list.innerHTML = html;
 }
 
-window.filterCategory = function(category) {
+window.filterCategory = function(category, element) {
+    // Update active class
+    const links = document.querySelectorAll('.cat-link');
+    links.forEach(link => link.classList.remove('active'));
+    if(element) element.classList.add('active');
+
     if (category === 'all') {
         renderProducts(products);
     } else {

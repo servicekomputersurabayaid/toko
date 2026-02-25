@@ -117,3 +117,14 @@ body { background-color: #f4f4f4; padding-bottom: 50px; }
 .zoom-close:hover, .zoom-close:focus {
     color: #bbb; text-decoration: none; cursor: pointer;
 }
+
+/* Category Menu (Horizontal) */
+.category-menu {
+    display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 10px; margin-bottom: 20px;
+}
+
+.cat-link {
+    display: inline-block; padding: 8px 16px; background: white; border: 1px solid #ddd;
+    border-radius: 20px; text-decoration: none; color: #2c3e50; font-size: 0.9rem; transition: 0.2s;
+}
+.cat-link:hover, .cat-link.active { background: #2c3e50; color: white; border-color: #2c3e50; }
