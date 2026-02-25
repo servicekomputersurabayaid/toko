@@ -71,12 +71,12 @@ window.uploadCSV = async function(){
     });
 
     await addDoc(collection(db,"products"),{
-      judul: data.judul,
-      deskripsi_singkat: data.deskripsi_singkat,
-      deskripsi_panjang: data.deskripsi_panjang,
+      judul: data.judul || "",
+      deskripsi_singkat: data.deskripsi_singkat || "",
+      deskripsi_panjang: data.deskripsi_panjang || "",
       harga: parseInt(data.harga) || 0,
       harga_diskon: parseInt(data.harga_diskon) || 0,
-      image_url: data.image_url,
+      image_url: data.image_url || "",
       active: true,
       createdAt: new Date()
     });
