@@ -124,6 +124,17 @@
     <button onclick="closeOrderDetail()" style="background:#e74c3c; color:white; border:none; padding:5px 10px;">Tutup</button>
 </div>
 
+<!-- Custom Alert/Confirm Modal -->
+<div id="custom-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000;">
+  <div style="background:white; margin:15% auto; padding:20px; width:300px; border-radius:5px; text-align:center; box-shadow:0 0 10px rgba(0,0,0,0.3);">
+    <p id="custom-modal-msg" style="margin-bottom:20px; font-size:16px; color:#333;"></p>
+    <div style="display:flex; justify-content:center; gap:10px;">
+      <button id="custom-modal-ok" style="background:#3498db; color:white; border:none; padding:8px 20px; cursor:pointer; border-radius:3px;">OK</button>
+      <button id="custom-modal-cancel" style="background:#e74c3c; color:white; border:none; padding:8px 20px; cursor:pointer; border-radius:3px; display:none;">Batal</button>
+    </div>
+  </div>
+</div>
+
 </div> <!-- End admin-content -->
 
 <script type="module">
@@ -145,6 +156,44 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// --- Custom Modal Helpers ---
+window.showCustomAlert = function(msg) {
+    return new Promise((resolve) => {
+        document.getElementById('custom-modal-msg').innerText = msg;
+        document.getElementById('custom-modal-cancel').style.display = 'none';
+        const modal = document.getElementById('custom-modal');
+        modal.style.display = 'block';
+        
+        const okBtn = document.getElementById('custom-modal-ok');
+        const newOkBtn = okBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+        
+        newOkBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            resolve();
+        });
+    });
+}
+
+window.showCustomConfirm = function(msg) {
+    return new Promise((resolve) => {
+        document.getElementById('custom-modal-msg').innerText = msg;
+        document.getElementById('custom-modal-cancel').style.display = 'block';
+        const modal = document.getElementById('custom-modal');
+        modal.style.display = 'block';
+        
+        const okBtn = document.getElementById('custom-modal-ok');
+        const cancelBtn = document.getElementById('custom-modal-cancel');
+        const newOkBtn = okBtn.cloneNode(true);
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        
+        newOkBtn.addEventListener('click', () => { modal.style.display = 'none'; resolve(true); });
+        newCancelBtn.addEventListener('click', () => { modal.style.display = 'none'; resolve(false); });
+    });
+}
 
 // --- Auth Logic ---
 
@@ -179,7 +228,7 @@ onAuthStateChanged(auth, async (user) => {
         } catch(e) { console.log("Config load error"); }
 
         if (user.email !== allowedEmail) {
-            alert("AKSES DITOLAK: Akun " + user.email + " tidak memiliki izin Admin.");
+            await showCustomAlert("AKSES DITOLAK: Akun " + user.email + " tidak memiliki izin Admin.");
             signOut(auth); // Logout paksa
             return;
         }
@@ -222,7 +271,7 @@ window.saveSettings = async function() {
     };
     
     await setDoc(doc(db, "settings", "store_config"), data);
-    alert("Pengaturan berhasil disimpan!");
+    await showCustomAlert("Pengaturan berhasil disimpan!");
 }
 
 window.uploadCSV = async function(){
@@ -231,7 +280,7 @@ window.uploadCSV = async function(){
   const status = document.getElementById("status");
 
   if(!fileInput.files.length){
-    alert("Pilih file CSV dulu");
+    await showCustomAlert("Pilih file CSV dulu");
     return;
   }
 
@@ -360,7 +409,8 @@ window.exportCSV = async function() {
 }
 
 window.deleteAllProducts = async function() {
-  if(!confirm("PERINGATAN: Apakah Anda yakin ingin MENGHAPUS SEMUA DATA PRODUK? \n\nTindakan ini tidak dapat dibatalkan! Pastikan Anda sudah melakukan Export/Backup jika diperlukan.")) {
+  const confirmed = await showCustomConfirm("PERINGATAN: Apakah Anda yakin ingin MENGHAPUS SEMUA DATA PRODUK? \n\nTindakan ini tidak dapat dibatalkan! Pastikan Anda sudah melakukan Export/Backup jika diperlukan.");
+  if(!confirmed) {
     return;
   }
 
@@ -401,7 +451,8 @@ window.restoreData = async function() {
   }
 
   const data = JSON.parse(raw);
-  if(!confirm(`Ditemukan ${data.length} produk dari penghapusan terakhir. Apakah Anda ingin me-restore (mengembalikan) data ini?`)) return;
+  const confirmed = await showCustomConfirm(`Ditemukan ${data.length} produk dari penghapusan terakhir. Apakah Anda ingin me-restore (mengembalikan) data ini?`);
+  if(!confirmed) return;
 
   const status = document.getElementById("status");
   status.innerHTML = "Sedang merestore data...";
@@ -476,12 +527,13 @@ window.loadOrders = async function() {
 }
 
 window.deleteOrder = async function(id) {
-    if(confirm("Yakin ingin menghapus pesanan ini?")) {
+    const confirmed = await showCustomConfirm("Yakin ingin menghapus pesanan ini?");
+    if(confirmed) {
         try {
             await deleteDoc(doc(db, "orders", id));
             loadOrders();
         } catch(e) {
-            alert("Gagal menghapus pesanan: " + e.message);
+            await showCustomAlert("Gagal menghapus pesanan: " + e.message);
         }
     }
 }
@@ -523,11 +575,11 @@ window.updateOrderStatus = async function() {
             status: newStatus,
             awb: newAwb
         });
-        alert("Status berhasil diupdate!");
+        await showCustomAlert("Status berhasil diupdate!");
         closeOrderDetail();
         loadOrders();
     } catch(e) {
-        alert("Gagal update status: " + e.message);
+        await showCustomAlert("Gagal update status: " + e.message);
     }
 }
 
@@ -658,7 +710,8 @@ async function loadProducts() {
 }
 
 window.deleteProduct = async function(id) {
-  if(confirm("Yakin ingin menghapus produk ini?")) {
+  const confirmed = await showCustomConfirm("Yakin ingin menghapus produk ini?");
+  if(confirmed) {
     await deleteDoc(doc(db, "products", id));
     loadProducts();
   }

@@ -243,12 +243,13 @@ function addToCart(id) {
 }
 
 // Logic Wishlist
-window.toggleWishlist = function(id) {
+window.toggleWishlist = async function(id) {
     const product = products.find(p => p.id === id);
     const index = wishlist.findIndex(item => item.id === id);
 
     if (index > -1) {
-        if(!confirm("Hapus dari Wishlist?")) return; // Konfirmasi hapus
+        const confirmed = await showConfirm("Hapus dari Wishlist?");
+        if(!confirmed) return; // Konfirmasi hapus
         wishlist.splice(index, 1); // Hapus jika sudah ada
         showToast("Dihapus dari Wishlist");
     } else {
@@ -386,8 +387,9 @@ function changeQty(id, change) {
     updateCartUI();
 }
 
-window.clearCart = function() {
-    if(confirm("Yakin ingin mengosongkan keranjang?")) {
+window.clearCart = async function() {
+    const confirmed = await showConfirm("Yakin ingin mengosongkan keranjang?");
+    if(confirmed) {
         cart = [];
         saveCart();
         updateCartUI();
@@ -1176,6 +1178,27 @@ window.showToast = function(message) {
 window.showAlert = function(message) {
     document.getElementById('custom-alert-message').innerText = message;
     document.getElementById('custom-alert-modal').style.display = 'block';
+}
+
+// Custom Confirm Function
+window.showConfirm = function(message) {
+    return new Promise((resolve) => {
+        document.getElementById('custom-confirm-message').innerText = message;
+        const modal = document.getElementById('custom-confirm-modal');
+        modal.style.display = 'block';
+
+        const yesBtn = document.getElementById('confirm-yes-btn');
+        const noBtn = document.getElementById('confirm-no-btn');
+
+        // Clone to clear listeners
+        const newYes = yesBtn.cloneNode(true);
+        const newNo = noBtn.cloneNode(true);
+        yesBtn.parentNode.replaceChild(newYes, yesBtn);
+        noBtn.parentNode.replaceChild(newNo, noBtn);
+
+        newYes.addEventListener('click', () => { modal.style.display = 'none'; resolve(true); });
+        newNo.addEventListener('click', () => { modal.style.display = 'none'; resolve(false); });
+    });
 }
 
 // Init
