@@ -1,0 +1,17 @@
+{
+  "hosting": {
+    "site": "servicekomputersurabaya",
+    "public": ".", 
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
