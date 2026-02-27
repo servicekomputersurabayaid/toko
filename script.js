@@ -146,14 +146,14 @@ function renderProducts(data = products, resetPage = false) {
     productList.innerHTML = html;
 
     // Event Listener untuk tombol Tambah
-    document.querySelectorAll('.btn-add').forEach(btn => {
+    productList.querySelectorAll('.btn-add').forEach(btn => {
         btn.addEventListener('click', (e) => {
             addToCart(e.target.dataset.id);
         });
     });
 
     // Event Listener untuk tombol Wishlist
-    document.querySelectorAll('.btn-wishlist').forEach(btn => {
+    productList.querySelectorAll('.btn-wishlist').forEach(btn => {
         btn.addEventListener('click', (e) => {
             toggleWishlist(e.currentTarget.dataset.id);
         });
@@ -229,6 +229,7 @@ if (sortSelect) {
 
 // 2. Logic Keranjang
 function addToCart(id) {
+    if (!id) return;
     const product = products.find(p => p.id === id);
     const existingItem = cart.find(item => item.id === id);
 
