@@ -1,7 +1,7 @@
 {
   "name": "toko",
   "version": "1.0.0",
-  "description": "My React + Vite project for Firebase Hosting",
+  "description": "My Vite project for Firebase Hosting",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -11,8 +11,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "vite": "^7.3.1"
   }
 }
