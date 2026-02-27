@@ -1007,6 +1007,10 @@ document.getElementById('btn-mobile-history')?.addEventListener('click', () => {
     document.getElementById('mobile-menu-modal').style.display = 'none';
     document.getElementById('btn-history-nav').click();
 });
+document.getElementById('btn-mobile-admin')?.addEventListener('click', () => {
+    document.getElementById('mobile-menu-modal').style.display = 'none';
+    window.location.href = 'admin.html';
+});
 document.getElementById('btn-mobile-track')?.addEventListener('click', () => {
     document.getElementById('mobile-menu-modal').style.display = 'none';
     document.getElementById('track-modal').style.display = 'block';
@@ -1140,6 +1144,11 @@ document.getElementById('close-history').addEventListener('click', () => {
     document.getElementById('history-modal').style.display = 'none';
 });
 
+// Handle Admin Button Click (Desktop)
+document.getElementById('btn-admin-nav').addEventListener('click', () => {
+    window.location.href = 'admin.html';
+});
+
 // Handle Logout
 btnLogoutNav.addEventListener('click', () => signOut(auth));
 
@@ -1152,13 +1161,42 @@ onAuthStateChanged(auth, (user) => {
         document.getElementById('btn-history-nav').style.display = 'block';
         userNameDisplay.style.display = 'block';
         userNameDisplay.innerText = user.email.split('@')[0]; // Tampilkan nama dari email
+        checkAdminStatus(user);
     } else {
         btnLoginNav.style.display = 'block';
         btnLogoutNav.style.display = 'none';
         document.getElementById('btn-history-nav').style.display = 'none';
+        document.getElementById('btn-admin-nav').style.display = 'none';
+        const btnMobileAdmin = document.getElementById('btn-mobile-admin');
+        if(btnMobileAdmin) btnMobileAdmin.style.display = 'none';
         userNameDisplay.style.display = 'none';
     }
 });
+
+async function checkAdminStatus(user) {
+    let adminEmail = "support@servicekomputersurabaya.id"; // Default fallback
+    
+    // Cek config dari database jika belum ada di variabel global
+    if (!storeConfig) {
+        try {
+            const docRef = doc(db, "settings", "store_config");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                storeConfig = docSnap.data();
+            }
+        } catch (e) { console.log("Gagal load config untuk admin check"); }
+    }
+
+    if (storeConfig && storeConfig.adminEmail) {
+        adminEmail = storeConfig.adminEmail;
+    }
+
+    if (user.email === adminEmail) {
+        document.getElementById('btn-admin-nav').style.display = 'block';
+        const btnMobileAdmin = document.getElementById('btn-mobile-admin');
+        if(btnMobileAdmin) btnMobileAdmin.style.display = 'block';
+    }
+}
 
 // Toast Function
 window.showToast = function(message) {
