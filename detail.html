@@ -124,6 +124,14 @@
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
+                    
+                    // Cek status produk
+                    const isActive = data.status ? (data.status === 'active') : (data.active !== false);
+                    if (!isActive) {
+                        document.getElementById('loading').innerText = "Maaf, produk ini sedang tidak aktif atau tidak tersedia.";
+                        return;
+                    }
+
                     currentProduct = {
                         id: docSnap.id,
                         name: data.judul || data.name,

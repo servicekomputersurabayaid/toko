@@ -37,15 +37,22 @@ async function loadProducts() {
         products = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            // Mapping data dari admin.html (judul, harga) ke frontend (name, price)
-            products.push({
-                id: doc.id,
-                name: data.judul || data.name || "Produk Tanpa Nama",
-                price: parseInt(data.harga || data.price || 0),
-                weight: parseInt(data.berat || data.weight || 1000), // Ambil berat (gram)
-                category: data.kategori || "Umum",
-                image: data.image_url || "https://via.placeholder.com/150"
-            });
+            
+            // Filter: Hanya tampilkan produk dengan status 'active'
+            // Kompatibilitas: Cek data.status == 'active' ATAU (jika status kosong) data.active != false
+            const isActive = data.status ? (data.status === 'active') : (data.active !== false);
+
+            if (isActive) {
+                // Mapping data dari admin.html (judul, harga) ke frontend (name, price)
+                products.push({
+                    id: doc.id,
+                    name: data.judul || data.name || "Produk Tanpa Nama",
+                    price: parseInt(data.harga || data.price || 0),
+                    weight: parseInt(data.berat || data.weight || 1000), // Ambil berat (gram)
+                    category: data.kategori || "Umum",
+                    image: data.image_url || "https://via.placeholder.com/150"
+                });
+            }
         });
 
         // Render Sidebar Kategori
