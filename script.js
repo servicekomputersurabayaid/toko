@@ -1132,18 +1132,21 @@ document.getElementById('toggle-register').addEventListener('click', (e) => {
     e.preventDefault();
     isRegisterMode = !isRegisterMode;
     const title = document.getElementById('login-title');
+    const subtitle = document.getElementById('login-subtitle');
     const btn = document.getElementById('btn-submit-login');
     const toggle = document.getElementById('toggle-register');
     const forgotLink = document.getElementById('forgot-password').parentElement;
     
     if(isRegisterMode) {
-        title.innerText = "Daftar Member Baru";
-        btn.innerText = "Daftar";
+        title.innerText = "Buat Akun Baru";
+        if(subtitle) subtitle.innerText = "Isi data diri Anda untuk mendaftar";
+        btn.innerText = "Daftar Sekarang";
         toggle.innerText = "Sudah punya akun? Login";
         forgotLink.style.display = 'none';
     } else {
-        title.innerText = "Login Member";
-        btn.innerText = "Login";
+        title.innerText = "Selamat Datang";
+        if(subtitle) subtitle.innerText = "Silakan login untuk melanjutkan belanja";
+        btn.innerText = "Masuk Sekarang";
         toggle.innerText = "Belum punya akun? Daftar disini";
         forgotLink.style.display = 'block';
     }

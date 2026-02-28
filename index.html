@@ -225,18 +225,29 @@
 
     <!-- Modal Login -->
     <div id="login-modal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <span class="close-btn" id="close-login">&times;</span>
-            <h2 id="login-title">Login Member</h2>
-            <div class="checkout-form">
-                <input type="email" id="login-email" placeholder="Email">
+        <div class="modal-content" style="max-width: 400px; border-radius: 16px; padding: 35px;">
+            <span class="close-btn" id="close-login" style="top: 15px; right: 20px;">&times;</span>
+            
+            <div class="login-header">
+                <img src="assets/logo.png" alt="Logo">
+                <h2 id="login-title">Selamat Datang</h2>
+                <p id="login-subtitle">Silakan login untuk melanjutkan belanja</p>
+            </div>
+
+            <div class="login-form">
+                <input type="email" id="login-email" placeholder="Alamat Email">
                 <input type="password" id="login-password" placeholder="Password">
-                <div style="text-align: right; margin-bottom: 10px;">
-                    <a href="#" id="forgot-password" style="font-size: 0.8rem; color: #e74c3c; text-decoration: none;">Lupa Password?</a>
+                
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                    <a href="#" id="forgot-password" style="font-size: 0.85rem; color: #e74c3c; text-decoration: none;">Lupa Password?</a>
                 </div>
-                <button id="btn-submit-login" class="btn-wa" style="background:#3498db;">Login</button>
-                <p style="margin-top:10px; text-align:center; font-size:0.9rem;">
-                    Belum punya akun? <a href="#" id="toggle-register" style="color:#3498db;">Daftar disini</a>
+                
+                <button id="btn-submit-login" class="btn-login-submit">Masuk Sekarang</button>
+            </div>
+
+            <div class="login-footer">
+                <p>
+                    Belum punya akun? <a href="#" id="toggle-register">Daftar disini</a>
                 </p>
             </div>
         </div>

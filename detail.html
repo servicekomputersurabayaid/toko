@@ -16,13 +16,16 @@
             <img src="assets/logo.png" alt="Service Komputer Surabaya">
             <!--<span class="logo-tagline">Pusat Komputer & Aksesoris Terlengkap</span>-->
         </div>
-        <div class="wishlist-icon" onclick="window.location.href='index.html'" style="margin-left: auto;">
-            <span class="material-icons">favorite</span>
-            <span id="wishlist-count">0</span>
-        </div>
-        <div class="cart-icon" onclick="window.location.href='index.html'">
-            <span class="material-icons">shopping_cart</span>
-            <span id="cart-count">0</span>
+        <div style="display:flex; align-items:center; gap:15px; margin-left: auto;">
+            <span class="material-icons" id="dark-mode-toggle" style="cursor:pointer;" title="Ganti Tema">dark_mode</span>
+            <div class="wishlist-icon" onclick="window.location.href='index.html'" style="margin:0;">
+                <span class="material-icons">favorite</span>
+                <span id="wishlist-count">0</span>
+            </div>
+            <div class="cart-icon" onclick="window.location.href='index.html'">
+                <span class="material-icons">shopping_cart</span>
+                <span id="cart-count">0</span>
+            </div>
         </div>
     </nav>
 
@@ -359,6 +362,21 @@
                 window.location.href = 'index.html?q=' + encodeURIComponent(this.value);
             }
         });
+
+        // --- FITUR DARK MODE ---
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.body.classList.add('dark-mode');
+            if(darkModeToggle) darkModeToggle.innerText = 'light_mode';
+        }
+        if(darkModeToggle) {
+            darkModeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                const isDark = document.body.classList.contains('dark-mode');
+                localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+                darkModeToggle.innerText = isDark ? 'light_mode' : 'dark_mode';
+            });
+        }
 
         loadDetail();
     </script>
