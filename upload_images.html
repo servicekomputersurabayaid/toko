@@ -70,6 +70,11 @@
             const statusDiv = document.getElementById('status');
             const output = document.getElementById('urlOutput');
             
+            if (!auth.currentUser) {
+                alert("Akses Ditolak: Anda belum login. Silakan login di halaman Admin terlebih dahulu.");
+                return;
+            }
+
             if (files.length === 0) {
                 alert("Silakan pilih file gambar terlebih dahulu!");
                 return;
