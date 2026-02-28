@@ -77,13 +77,31 @@
 <hr>
 
 <h3>Daftar Produk</h3>
-<input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Cari nama produk atau kategori..." class="search-admin">
+
+<div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; font-size: 0.9rem;">
+  <span style="padding: 8px 12px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px;">Total: <strong id="cnt-total">0</strong></span>
+  <span style="padding: 8px 12px; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 4px;">Aktif: <strong id="cnt-active">0</strong></span>
+  <span style="padding: 8px 12px; background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 4px;">Draft: <strong id="cnt-draft">0</strong></span>
+  <span style="padding: 8px 12px; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 4px;">Nonaktif: <strong id="cnt-inactive">0</strong></span>
+</div>
+
+<div style="display: flex; gap: 10px; margin-bottom: 10px;">
+    <select id="filterStatus" onchange="searchTable()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; min-width: 120px;">
+        <option value="">Semua Status</option>
+        <option value="active">Aktif</option>
+        <option value="draft">Draft</option>
+        <option value="inactive">Nonaktif</option>
+    </select>
+    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Cari nama produk atau kategori..." class="search-admin" style="margin-bottom: 0; flex: 1;">
+</div>
+
 <table id="productTable">
   <thead>
     <tr>
       <th>Judul</th>
       <th>Kategori</th>
       <th>Harga</th>
+      <th>Status</th>
       <th>Aksi</th>
     </tr>
   </thead>
@@ -100,6 +118,12 @@
   <label>Kategori:</label><input type="text" id="editKategori" placeholder="Contoh: Laptop, Aksesoris">
   <label>Berat (gram):</label><input type="number" id="editBerat">
   <label>Image URL:</label><input type="text" id="editImage">
+  <label>Status:</label>
+  <select id="editStatus" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd;">
+      <option value="active">Aktif</option>
+      <option value="draft">Draft</option>
+      <option value="inactive">Nonaktif</option>
+  </select>
   <label>Deskripsi Singkat:</label><input type="text" id="editDescShort">
   <label>Deskripsi Panjang:</label><textarea id="editDescLong"></textarea>
   <button onclick="saveEdit()">Simpan</button>
@@ -345,6 +369,7 @@ window.uploadCSV = async function(){
       image_url: imgList[0] || "", // Gambar pertama sebagai cover utama
       images: imgList, // Simpan semua gambar dalam array
       active: true,
+      status: "active", // Default status
       createdAt: new Date()
     });
 
@@ -368,7 +393,7 @@ window.exportCSV = async function() {
     const querySnapshot = await getDocs(collection(db, "products"));
     
     // Header CSV yang sesuai dengan format upload (agar bisa di-import lagi)
-    const headers = ["judul", "kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon"];
+    const headers = ["judul", "kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status"];
     let csvContent = headers.join(",") + "\n";
 
     querySnapshot.forEach((doc) => {
@@ -682,22 +707,46 @@ window.productsData = {}; // Simpan data produk di memori
 
 async function loadProducts() {
   const tbody = document.querySelector("#productTable tbody");
-  tbody.innerHTML = "<tr><td colspan='3'>Memuat...</td></tr>";
+  tbody.innerHTML = "<tr><td colspan='5'>Memuat...</td></tr>";
   
   try {
     const querySnapshot = await getDocs(collection(db, "products"));
     tbody.innerHTML = "";
     window.productsData = {}; // Reset data
     
+    let counts = { total: 0, active: 0, draft: 0, inactive: 0 };
+
     querySnapshot.forEach((doc) => {
       const p = doc.data();
       window.productsData[doc.id] = p; // Simpan untuk keperluan edit
       
+      // Normalisasi Status (Fallback ke 'active' boolean jika field 'status' belum ada)
+      let status = p.status;
+      if (!status) {
+          status = (p.active === false) ? 'inactive' : 'active';
+      }
+      
+      // Hitung Statistik
+      counts.total++;
+      if (counts[status] !== undefined) {
+          counts[status]++;
+      } else {
+          // Jika status tidak dikenal, masukkan ke inactive atau hitung manual
+          if(status === 'active') counts.active++;
+          else if(status === 'draft') counts.draft++;
+          else counts.inactive++;
+      }
+
+      // Warna Badge Status
+      let badgeColor = status === 'active' ? '#d4edda' : (status === 'draft' ? '#fff3cd' : '#f8d7da');
+      let textColor = status === 'active' ? '#155724' : (status === 'draft' ? '#856404' : '#721c24');
+
       const row = `
         <tr>
           <td>${p.judul || p.name || '-'}</td>
           <td>${p.kategori || 'Umum'}</td>
           <td>Rp ${p.harga}</td>
+          <td><span style="padding: 4px 8px; border-radius: 4px; background: ${badgeColor}; color: ${textColor}; font-size: 0.85rem; text-transform: capitalize;">${status}</span></td>
           <td>
             <button class="btn btn-edit" onclick="editProduct('${doc.id}')">Edit</button>
             <button class="btn btn-delete" onclick="deleteProduct('${doc.id}')">Hapus</button>
@@ -706,9 +755,16 @@ async function loadProducts() {
       `;
       tbody.innerHTML += row;
     });
+
+    // Update UI Counters
+    document.getElementById('cnt-total').innerText = counts.total;
+    document.getElementById('cnt-active').innerText = counts.active;
+    document.getElementById('cnt-draft').innerText = counts.draft;
+    document.getElementById('cnt-inactive').innerText = counts.inactive;
+
   } catch (e) {
     console.error(e);
-    tbody.innerHTML = "<tr><td colspan='3'>Gagal memuat data: " + e.message + "</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='5'>Gagal memuat data: " + e.message + "</td></tr>";
   }
 }
 
@@ -770,6 +826,7 @@ window.editProduct = function(id) {
   document.getElementById("editKategori").value = p.kategori || "Umum";
   document.getElementById("editBerat").value = p.berat || 1000;
   document.getElementById("editImage").value = (p.images && p.images.length > 0) ? p.images.join(" | ") : (p.image_url || "");
+  document.getElementById("editStatus").value = p.status || (p.active === false ? "inactive" : "active");
   document.getElementById("editDescShort").value = p.deskripsi_singkat || "";
   document.getElementById("editDescLong").value = p.deskripsi_panjang || "";
   
@@ -781,6 +838,7 @@ window.saveEdit = async function() {
   const id = document.getElementById("editId").value;
   const rawImg = document.getElementById("editImage").value;
   const imgList = rawImg.split("|").map(s => s.trim()).filter(s => s);
+  const status = document.getElementById("editStatus").value;
 
   const updateData = {
     judul: document.getElementById("editJudul").value,
@@ -789,6 +847,8 @@ window.saveEdit = async function() {
     berat: parseInt(document.getElementById("editBerat").value),
     image_url: imgList[0] || "",
     images: imgList,
+    status: status,
+    active: (status === 'active'), // Sync active boolean agar kompatibel
     deskripsi_singkat: document.getElementById("editDescShort").value,
     deskripsi_panjang: document.getElementById("editDescLong").value
   };
@@ -806,19 +866,25 @@ window.cancelEdit = function() {
 window.searchTable = function() {
   const input = document.getElementById("searchInput");
   const filter = input.value.toLowerCase();
+  const statusFilter = document.getElementById("filterStatus").value.toLowerCase();
+  
   const table = document.getElementById("productTable");
   const tr = table.getElementsByTagName("tr");
 
   for (let i = 1; i < tr.length; i++) {
     const tdTitle = tr[i].getElementsByTagName("td")[0]; // Kolom Judul
     const tdCategory = tr[i].getElementsByTagName("td")[1]; // Kolom Kategori
+    const tdStatus = tr[i].getElementsByTagName("td")[3]; // Kolom Status
 
-    if (tdTitle && tdCategory) {
+    if (tdTitle && tdCategory && tdStatus) {
       const titleValue = tdTitle.textContent || tdTitle.innerText;
       const categoryValue = tdCategory.textContent || tdCategory.innerText;
+      const statusValue = tdStatus.textContent || tdStatus.innerText;
       
-      // Cari di Judul ATAU Kategori
-      if (titleValue.toLowerCase().indexOf(filter) > -1 || categoryValue.toLowerCase().indexOf(filter) > -1) {
+      const matchesSearch = (titleValue.toLowerCase().indexOf(filter) > -1 || categoryValue.toLowerCase().indexOf(filter) > -1);
+      const matchesStatus = (statusFilter === "" || statusValue.toLowerCase() === statusFilter);
+
+      if (matchesSearch && matchesStatus) {
         tr[i].style.display = "";
       } else {
         tr[i].style.display = "none";
