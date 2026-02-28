@@ -186,3 +186,26 @@ body { background-color: #f4f4f4; padding-bottom: 50px; }
 }
 .page-btn:hover { background: #f0f0f0; }
 .page-btn.active { background: #2c3e50; color: white; border-color: #2c3e50; }
+
+/* Floating WhatsApp Button */
+.fab-wa {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    background-color: #25D366;
+    color: white;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    z-index: 1000;
+    text-decoration: none;
+    transition: transform 0.3s;
+}
+.fab-wa:hover { transform: scale(1.1); }
+@media (min-width: 769px) {
+    .fab-wa { bottom: 30px; }
+}

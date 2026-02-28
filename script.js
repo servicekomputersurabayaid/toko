@@ -84,6 +84,12 @@ async function loadStoreConfig() {
         if (docSnap.exists()) {
             storeConfig = docSnap.data();
         }
+        
+        // Update Link WA di FAB (Floating Action Button)
+        if (storeConfig && storeConfig.adminPhone) {
+             const fab = document.getElementById('fab-wa');
+             if(fab) fab.href = `https://wa.me/${storeConfig.adminPhone}?text=Halo%20Admin,%20saya%20mau%20tanya%20seputar%20produk%20di%20toko.`;
+        }
     } catch (e) {
         console.error("Gagal load config:", e);
     }

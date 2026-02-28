@@ -53,6 +53,9 @@
                 <button id="btn-add-detail" class="btn-add" style="padding: 15px; font-size: 1.1rem;">
                     + Masukkan Keranjang
                 </button>
+                <button id="btn-ask-stock" class="btn-add" style="padding: 15px; font-size: 1.1rem; background: #25D366; margin-top: 10px;">
+                    <span class="material-icons" style="vertical-align: middle; font-size: 1.2rem; margin-right: 5px;">chat</span> Tanya Stok / Detail
+                </button>
                 <button id="btn-wishlist-detail" class="btn-add" style="padding: 15px; font-size: 1.1rem; background: #e74c3c; margin-top: 10px;">
                     <span class="material-icons" style="vertical-align: middle; font-size: 1.2rem;">favorite_border</span> Simpan ke Wishlist
                 </button>
@@ -253,6 +256,23 @@
 
         document.getElementById('btn-add-detail').addEventListener('click', () => {
             if (currentProduct) addToCart(currentProduct.id, currentProduct.name, currentProduct.price, currentProduct.image);
+        });
+
+        // Logic Tanya Stok via WA
+        document.getElementById('btn-ask-stock').addEventListener('click', async () => {
+            if (!currentProduct) return;
+            
+            let adminPhone = "628994335111"; // Default
+            try {
+                const docRef = doc(db, "settings", "store_config");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().adminPhone) {
+                    adminPhone = docSnap.data().adminPhone;
+                }
+            } catch(e) { console.log("Gagal load config WA"); }
+
+            const message = `Halo Admin, apakah stok produk "${currentProduct.name}" masih tersedia?`;
+            window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`, '_blank');
         });
 
         // Logic Wishlist di Detail
