@@ -344,7 +344,17 @@ window.uploadCSV = async function(){
 
   const headers = splitCSV(rows[0]);
 
+  // 1. Ambil data produk yang sudah ada untuk cek duplikasi (berdasarkan Judul)
+  const existingProductsMap = new Map();
+  const snapshot = await getDocs(collection(db, "products"));
+  snapshot.forEach(doc => {
+      const d = doc.data();
+      const key = (d.judul || d.name || "").toLowerCase().trim();
+      if(key) existingProductsMap.set(key, doc.id);
+  });
+
   let success = 0;
+  let updated = 0;
 
   for(let i=1; i<rows.length; i++){
     const cols = splitCSV(rows[i]);
@@ -354,12 +364,15 @@ window.uploadCSV = async function(){
       data[h] = cols[index] || "";
     });
 
+    // Skip jika baris kosong (tidak ada judul)
+    if(!data.judul && !data.name) continue;
+
     // Handle Multiple Images (Split by |)
     const rawImg = data.image_url || "";
     const imgList = rawImg.split("|").map(s => s.trim()).filter(s => s);
-
-    await addDoc(collection(db,"products"),{
-      judul: data.judul || "",
+    
+    const productData = {
+      judul: data.judul || data.name || "",
       deskripsi_singkat: cleanHTML(data.deskripsi_singkat || ""),
       deskripsi_panjang: cleanHTML(data.deskripsi_panjang || ""),
       harga: parseInt(data.harga) || 0,
@@ -369,15 +382,34 @@ window.uploadCSV = async function(){
       image_url: imgList[0] || "", // Gambar pertama sebagai cover utama
       images: imgList, // Simpan semua gambar dalam array
       active: true,
-      status: "active", // Default status
-      createdAt: new Date()
-    });
+      status: data.status || "active", // Gunakan status dari CSV jika ada
+    };
 
-    success++;
-    status.innerHTML = "Mengupload produk ke-" + success;
+    // Cek apakah ID ada di CSV atau Judul sudah ada di database
+    let targetId = data.id; // Jika kolom 'id' ada di CSV
+    if (!targetId) {
+        const key = productData.judul.toLowerCase().trim();
+        if (existingProductsMap.has(key)) {
+            targetId = existingProductsMap.get(key);
+        }
+    }
+
+    if (targetId) {
+        // Update Produk Existing
+        productData.updatedAt = new Date();
+        await setDoc(doc(db, "products", targetId), productData, { merge: true });
+        updated++;
+    } else {
+        // Buat Produk Baru
+        productData.createdAt = new Date();
+        await addDoc(collection(db, "products"), productData);
+        success++;
+    }
+    
+    status.innerHTML = `Proses: ${success} Baru, ${updated} Update`;
   }
 
-  status.innerHTML = "Upload selesai. Total produk: " + success;
+  status.innerHTML = `Selesai! ${success} produk baru, ${updated} produk diupdate.`;
   loadProducts(); // Refresh list after upload
   } catch (error) {
     console.error(error);
@@ -393,11 +425,13 @@ window.exportCSV = async function() {
     const querySnapshot = await getDocs(collection(db, "products"));
     
     // Header CSV yang sesuai dengan format upload (agar bisa di-import lagi)
-    const headers = ["judul", "kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status"];
+    const headers = ["id", "judul", "kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status"];
     let csvContent = headers.join(",") + "\n";
 
     querySnapshot.forEach((doc) => {
       const data = doc.data();
+      data.id = doc.id; // Masukkan ID ke data object agar ter-export
+
       const row = headers.map(fieldName => {
         // Ambil data. Jika 'judul' kosong, coba ambil 'name' (untuk data lama)
         let val = data[fieldName];
