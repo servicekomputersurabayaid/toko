@@ -139,6 +139,7 @@
                         id: docSnap.id,
                         name: data.judul || data.name,
                         price: parseInt(data.harga || data.price),
+                        originalPrice: parseInt(data.harga_diskon || 0),
                         image: data.image_url,
                         images: data.images || [data.image_url], // Ambil array images atau fallback ke single image
                         description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi."
@@ -147,7 +148,20 @@
                     // Render ke HTML
                     document.getElementById('d-image').src = currentProduct.image;
                     document.getElementById('d-title').innerText = currentProduct.name;
-                    document.getElementById('d-price').innerText = "Rp " + currentProduct.price.toLocaleString('id-ID');
+                    
+                    // Render Harga & Diskon
+                    const priceEl = document.getElementById('d-price');
+                    if (currentProduct.originalPrice > currentProduct.price) {
+                        const discount = Math.round(((currentProduct.originalPrice - currentProduct.price) / currentProduct.originalPrice) * 100);
+                        priceEl.innerHTML = `
+                            <span style="text-decoration: line-through; color: #95a5a6; font-size: 1.1rem; margin-right: 8px;">Rp ${currentProduct.originalPrice.toLocaleString('id-ID')}</span>
+                            <span>Rp ${currentProduct.price.toLocaleString('id-ID')}</span>
+                            <span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:4px; font-size:0.9rem; margin-left:8px; vertical-align: middle;">-${discount}%</span>
+                        `;
+                    } else {
+                        priceEl.innerText = "Rp " + currentProduct.price.toLocaleString('id-ID');
+                    }
+                    
                     document.getElementById('d-desc').innerText = currentProduct.description;
 
                     // Render Thumbnails

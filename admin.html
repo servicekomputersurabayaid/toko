@@ -3,33 +3,128 @@
 <head>
   <title>Admin-Data Produk Service Komputer Surabaya ID</title>
   <style>
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background-color: #f2f2f2; }
-    .btn { padding: 5px 10px; cursor: pointer; margin-right: 5px; }
-    .btn-edit { background-color: #ffc107; border: none; }
-    .btn-delete { background-color: #f44336; color: white; border: none; }
-    #editForm { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; box-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 1000; width: 400px; }
-    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
-    input, textarea { width: 100%; margin-bottom: 10px; padding: 5px; box-sizing: border-box; }
-    .search-admin { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; }
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
     
     /* Login Styles */
-    #login-section { max-width: 300px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; text-align: center; }
-    #admin-content { display: none; }
+    #login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: linear-gradient(135deg, #2c3e50, #3498db);
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 2000;
+    }
+    .login-card {
+        background: white;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        text-align: center;
+        width: 90%;
+        max-width: 400px;
+    }
+    .login-logo {
+        max-width: 180px;
+        margin-bottom: 15px;
+    }
+    .login-card h3 {
+        margin: 10px 0 5px;
+        color: #2c3e50;
+        font-size: 1.5rem;
+    }
+    .login-subtitle {
+        color: #7f8c8d;
+        margin-bottom: 30px;
+        font-size: 0.95rem;
+    }
+    #login-container input {
+        width: 100%;
+        padding: 12px 15px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+        box-sizing: border-box;
+    }
+    #login-container input:focus {
+        border-color: #3498db;
+        outline: none;
+    }
+    .btn-login {
+        width: 100%;
+        padding: 12px;
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    .btn-login:hover {
+        background: #2980b9;
+    }
+    #login-error {
+        color: #e74c3c;
+        margin-top: 15px;
+        font-size: 0.9rem;
+        min-height: 20px;
+    }
+
+    /* Admin Content Styles */
+    #admin-content { display: none; padding: 30px; max-width: 1200px; margin: 0 auto; }
     
-    /* Settings Styles */
-    .settings-box { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; background: #f9f9f9; }
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background-color: #f8f9fa; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background-color: #f9f9f9; }
+
+    /* Buttons */
+    .btn { padding: 8px 12px; cursor: pointer; margin-right: 5px; border-radius: 4px; font-size: 0.85rem; transition: 0.2s; }
+    .btn-edit { background-color: #f39c12; color: white; border: none; }
+    .btn-edit:hover { background-color: #e67e22; }
+    .btn-delete { background-color: #e74c3c; color: white; border: none; }
+    .btn-delete:hover { background-color: #c0392b; }
+    
+    /* Forms & Inputs in Admin */
+    input[type="text"], input[type="number"], input[type="email"], textarea, select {
+        width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;
+    }
+    .search-admin { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    
+    /* Settings Box */
+    .settings-box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; border: none; }
+    h2, h3 { color: #2c3e50; }
+    hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+
+    /* Modals */
+    #editForm, #orderDetailModal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); z-index: 1000; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; backdrop-filter: blur(2px); }
+    
+    /* Custom Modal */
+    #custom-modal > div { border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
   </style>
 </head>
 <body>
 
-<div id="login-section">
-  <h3>Login Admin</h3>
-  <input type="email" id="admin-email" placeholder="Email Admin">
-  <input type="password" id="admin-password" placeholder="Password">
-  <button onclick="loginAdmin()" style="width:100%; padding:10px; background:#3498db; color:white; border:none;">Login</button>
-  <p id="login-error" style="color:red;"></p>
+<div id="login-container">
+    <div class="login-card">
+        <img src="assets/logo.png" alt="Service Komputer Surabaya" class="login-logo">
+        <h3>Admin Login</h3>
+        <p class="login-subtitle">Silakan login untuk mengelola data.</p>
+        <input type="email" id="admin-email" placeholder="Email Admin">
+        <input type="password" id="admin-password" placeholder="Password">
+        <button onclick="loginAdmin()" class="btn-login">Login</button>
+        <p id="login-error"></p>
+    </div>
 </div>
 
 <div id="admin-content">
@@ -121,7 +216,9 @@
   <input type="hidden" id="editId">
   <label>Judul:</label><input type="text" id="editJudul">
   <label>Harga:</label><input type="number" id="editHarga">
+  <label>Harga Coret (Opsional):</label><input type="number" id="editHargaDiskon" placeholder="Isi jika ada diskon">
   <label>Kategori:</label><input type="text" id="editKategori" placeholder="Contoh: Laptop, Aksesoris">
+  <label>Sub Kategori:</label><input type="text" id="editSubKategori" placeholder="Contoh: Gaming, Office (Opsional)">
   <label>Berat (gram):</label><input type="number" id="editBerat">
   <label>Image URL:</label><input type="text" id="editImage">
   <label>Status:</label>
@@ -266,13 +363,13 @@ onAuthStateChanged(auth, async (user) => {
             return;
         }
 
-        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('login-container').style.display = 'none';
         document.getElementById('admin-content').style.display = 'block';
         loadProducts();
         loadOrders(); // Load orders when logged in
         loadSettings();
     } else {
-        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('login-container').style.display = 'flex';
         document.getElementById('admin-content').style.display = 'none';
     }
 });
@@ -384,11 +481,12 @@ window.uploadCSV = async function(){
       harga: parseInt(data.harga) || 0,
       harga_diskon: parseInt(data.harga_diskon) || 0,
       kategori: data.kategori || "Umum",
+      sub_kategori: data.sub_kategori || "", // Tambahkan Sub Kategori
       berat: parseInt(data.berat) || 1000, // Default 1000 gram jika kosong
       image_url: imgList[0] || "", // Gambar pertama sebagai cover utama
       images: imgList, // Simpan semua gambar dalam array
-      active: true,
       status: data.status || "active", // Gunakan status dari CSV jika ada
+      active: (data.status === 'active' || !data.status), // Sync active boolean (true jika active atau kosong)
     };
 
     // Cek apakah ID ada di CSV atau Judul sudah ada di database
@@ -432,7 +530,7 @@ window.exportCSV = async function() {
     const querySnapshot = await getDocs(collection(db, "products"));
     
     // Header CSV yang sesuai dengan format upload (agar bisa di-import lagi)
-    const headers = ["id", "judul", "kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status"];
+    const headers = ["id", "judul", "kategori", "sub_kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status"];
     let csvContent = headers.join(",") + "\n";
     let count = 0;
 
@@ -489,7 +587,8 @@ window.exportCSV = async function() {
     }
 
     // Buat file blob dan download otomatis
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Tambahkan BOM (\uFEFF) agar Excel membaca UTF-8 dengan benar
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -811,10 +910,12 @@ async function loadProducts() {
       let badgeColor = status === 'active' ? '#d4edda' : (status === 'draft' ? '#fff3cd' : '#f8d7da');
       let textColor = status === 'active' ? '#155724' : (status === 'draft' ? '#856404' : '#721c24');
 
+      const subCatDisplay = p.sub_kategori ? `<br><small style="color:#666; font-style:italic;">${p.sub_kategori}</small>` : '';
+
       const row = `
         <tr>
           <td>${p.judul || p.name || '-'}</td>
-          <td>${p.kategori || 'Umum'}</td>
+          <td>${p.kategori || 'Umum'} ${subCatDisplay}</td>
           <td>Rp ${p.harga}</td>
           <td><span style="padding: 4px 8px; border-radius: 4px; background: ${badgeColor}; color: ${textColor}; font-size: 0.85rem; text-transform: capitalize;">${status}</span></td>
           <td>
@@ -893,7 +994,9 @@ window.editProduct = function(id) {
   document.getElementById("editId").value = id;
   document.getElementById("editJudul").value = p.judul || p.name || "";
   document.getElementById("editHarga").value = p.harga || 0;
+  document.getElementById("editHargaDiskon").value = p.harga_diskon || 0;
   document.getElementById("editKategori").value = p.kategori || "Umum";
+  document.getElementById("editSubKategori").value = p.sub_kategori || "";
   document.getElementById("editBerat").value = p.berat || 1000;
   document.getElementById("editImage").value = (p.images && p.images.length > 0) ? p.images.join(" | ") : (p.image_url || "");
   document.getElementById("editStatus").value = p.status || (p.active === false ? "inactive" : "active");
@@ -913,7 +1016,9 @@ window.saveEdit = async function() {
   const updateData = {
     judul: document.getElementById("editJudul").value,
     harga: parseInt(document.getElementById("editHarga").value),
+    harga_diskon: parseInt(document.getElementById("editHargaDiskon").value) || 0,
     kategori: document.getElementById("editKategori").value,
+    sub_kategori: document.getElementById("editSubKategori").value,
     berat: parseInt(document.getElementById("editBerat").value),
     image_url: imgList[0] || "",
     images: imgList,

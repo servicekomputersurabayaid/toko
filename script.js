@@ -25,12 +25,35 @@ let currentUser = null; // Menyimpan data user yang login
 let storeConfig = null; // Menyimpan konfigurasi toko
 let currentPage = 1;
 const itemsPerPage = 20; // Jumlah produk per halaman
+let currentActiveCategory = 'all'; // Menyimpan kategori yang sedang aktif
 
 // KONFIGURASI BINDERBYTE (SERVER SENDIRI)
 const BINDERBYTE_URL = 'https://servicekomputersurabaya.id/binderbyte.php'; // Pastikan file ini diupload
 
+// Fungsi Skeleton Loading
+function showSkeleton() {
+    const productList = document.getElementById('product-list');
+    if(!productList) return;
+    
+    let html = '<div class="product-grid">';
+    for(let i=0; i<8; i++) { // Tampilkan 8 dummy card
+        html += `
+        <div class="skeleton-card">
+            <div class="skeleton skeleton-img"></div>
+            <div class="skeleton-info">
+                <div class="skeleton skeleton-text"></div>
+                <div class="skeleton skeleton-text-sm"></div>
+                <div class="skeleton skeleton-btn"></div>
+            </div>
+        </div>`;
+    }
+    html += '</div>';
+    productList.innerHTML = html;
+}
+
 // 1. Load Products from Firebase
 async function loadProducts() {
+    showSkeleton(); // Tampilkan skeleton sebelum fetch data
     const productList = document.getElementById('product-list');
     try {
         const querySnapshot = await getDocs(collection(db, "products"));
@@ -48,8 +71,10 @@ async function loadProducts() {
                     id: doc.id,
                     name: data.judul || data.name || "Produk Tanpa Nama",
                     price: parseInt(data.harga || data.price || 0),
+                    originalPrice: parseInt(data.harga_diskon || 0),
                     weight: parseInt(data.berat || data.weight || 1000), // Ambil berat (gram)
                     category: data.kategori || "Umum",
+                    subCategory: data.sub_kategori || "", // Load Sub Kategori
                     image: data.image_url || "https://via.placeholder.com/150"
                 });
             }
@@ -113,15 +138,51 @@ window.filterCategory = function(category, element) {
     const links = document.querySelectorAll('.cat-link');
     links.forEach(link => link.classList.remove('active'));
     if(element) element.classList.add('active');
+    
+    currentActiveCategory = category;
+    const subCatContainer = document.getElementById('subcategory-list');
 
     if (category === 'all') {
+        subCatContainer.style.display = 'none'; // Sembunyikan sub-kategori jika 'Semua'
         currentPage = 1;
         renderProducts(products, true);
     } else {
         const filtered = products.filter(p => p.category === category);
+        
+        // Render Sub-Kategori
+        const subCategories = [...new Set(filtered.map(p => p.subCategory).filter(s => s))].sort();
+        
+        if (subCategories.length > 0) {
+            let subHtml = `<a href="#" onclick="filterSubCategory('all', this); return false;" class="cat-link active" style="font-size:0.85rem; padding:5px 12px;">Semua ${category}</a>`;
+            subCategories.forEach(sub => {
+                subHtml += `<a href="#" onclick="filterSubCategory('${sub}', this); return false;" class="cat-link" style="font-size:0.85rem; padding:5px 12px;">${sub}</a>`;
+            });
+            subCatContainer.innerHTML = subHtml;
+            subCatContainer.style.display = 'flex';
+        } else {
+            subCatContainer.style.display = 'none';
+        }
+
         currentPage = 1;
         renderProducts(filtered, true);
     }
+}
+
+window.filterSubCategory = function(subCategory, element) {
+    // Update active class di sub-menu
+    const container = document.getElementById('subcategory-list');
+    const links = container.querySelectorAll('.cat-link');
+    links.forEach(link => link.classList.remove('active'));
+    if(element) element.classList.add('active');
+
+    let filtered = products.filter(p => p.category === currentActiveCategory);
+
+    if (subCategory !== 'all') {
+        filtered = filtered.filter(p => p.subCategory === subCategory);
+    }
+
+    currentPage = 1;
+    renderProducts(filtered, true);
 }
 
 function renderProducts(data = products, resetPage = false) {
@@ -142,15 +203,32 @@ function renderProducts(data = products, resetPage = false) {
     html += paginatedData.map(product => {
         const isWishlist = wishlist.some(item => item.id === product.id);
         const heartClass = isWishlist ? 'active' : '';
+        
+        // Logic Diskon
+        let discountBadge = '';
+        let priceDisplay = `<p class="product-price">Rp ${product.price.toLocaleString('id-ID')}</p>`;
+        
+        if (product.originalPrice > product.price) {
+            const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+            discountBadge = `<span class="badge-discount">-${discount}%</span>`;
+            priceDisplay = `
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin-bottom:10px;">
+                    <span class="price-strikethrough">Rp ${product.originalPrice.toLocaleString('id-ID')}</span>
+                    <span class="product-price" style="margin-bottom:0;">Rp ${product.price.toLocaleString('id-ID')}</span>
+                </div>
+            `;
+        }
+
         return `
         <div class="product-card">
+            ${discountBadge}
             <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
             <div onclick="window.location.href='detail.html?id=${product.id}'" style="cursor:pointer">
                 <img src="${product.image}" alt="${product.name}" class="product-img">
             </div>
             <div class="product-info">
                 <h3 class="product-title" onclick="window.location.href='detail.html?id=${product.id}'" style="cursor:pointer">${product.name}</h3>
-                <p class="product-price">Rp ${product.price.toLocaleString('id-ID')}</p>
+                ${priceDisplay}
                 <button class="btn-add" data-id="${product.id}">+ Keranjang</button>
             </div>
         </div>`}).join('');
@@ -1259,3 +1337,35 @@ loadStoreConfig();
 loadProvinsi();
 updateWishlistUI();
 updateCartUI(); // Pastikan UI keranjang selalu di-update saat awal load
+
+// --- FITUR DARK MODE ---
+const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+// Cek preferensi tersimpan
+if (localStorage.getItem('darkMode') === 'enabled') {
+    document.body.classList.add('dark-mode');
+    if(darkModeToggle) darkModeToggle.innerText = 'light_mode';
+}
+
+if(darkModeToggle) {
+    darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+        darkModeToggle.innerText = isDark ? 'light_mode' : 'dark_mode';
+    });
+}
+
+// --- FITUR NAVBAR HIDE ON SCROLL ---
+let lastScrollTop = 0;
+const navbar = document.querySelector('.navbar');
+
+window.addEventListener('scroll', () => {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    if (scrollTop > lastScrollTop) {
+        navbar.classList.add('navbar-hidden'); // Scroll ke bawah -> Sembunyi
+    } else {
+        navbar.classList.remove('navbar-hidden'); // Scroll ke atas -> Muncul
+    }
+    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // Hindari nilai negatif
+});
