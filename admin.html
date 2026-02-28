@@ -51,6 +51,12 @@
 <input type="file" id="csvFile" accept=".csv">
 <br><br>
 <button onclick="uploadCSV()">Upload</button>
+<select id="exportStatusFilter" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-left: 5px;">
+    <option value="all">Semua Status</option>
+    <option value="active">Aktif</option>
+    <option value="draft">Draft</option>
+    <option value="inactive">Nonaktif</option>
+</select>
 <button onclick="exportCSV()">Download CSV (Export)</button>
 <button onclick="deleteAllProducts()" style="background-color: #d32f2f; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Hapus Semua Data</button>
 <button onclick="restoreData()" style="background-color: #2196F3; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Restore Data Terakhir</button>
@@ -419,7 +425,8 @@ window.uploadCSV = async function(){
 
 window.exportCSV = async function() {
   const status = document.getElementById("status");
-  status.innerHTML = "Sedang mengekspor data...";
+  const filterStatus = document.getElementById("exportStatusFilter").value;
+  status.innerHTML = `Sedang mengekspor data (${filterStatus})...`;
 
   try {
     const querySnapshot = await getDocs(collection(db, "products"));
@@ -427,10 +434,24 @@ window.exportCSV = async function() {
     // Header CSV yang sesuai dengan format upload (agar bisa di-import lagi)
     const headers = ["id", "judul", "kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status"];
     let csvContent = headers.join(",") + "\n";
+    let count = 0;
 
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       data.id = doc.id; // Masukkan ID ke data object agar ter-export
+
+      // Normalisasi Status untuk Filter
+      let itemStatus = data.status;
+      if (!itemStatus) {
+          itemStatus = (data.active === false) ? 'inactive' : 'active';
+      }
+
+      // Filter Logic
+      if (filterStatus !== 'all' && itemStatus !== filterStatus) {
+          return; 
+      }
+
+      count++;
 
       const row = headers.map(fieldName => {
         // Ambil data. Jika 'judul' kosong, coba ambil 'name' (untuk data lama)
@@ -452,18 +473,23 @@ window.exportCSV = async function() {
       csvContent += row.join(",") + "\n";
     });
 
+    if (count === 0) {
+        status.innerHTML = "Tidak ada data dengan status tersebut.";
+        return;
+    }
+
     // Buat file blob dan download otomatis
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "data_produk_tokoonline.csv");
+    link.setAttribute("download", `data_produk_${filterStatus}_${new Date().toISOString().slice(0,10)}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    status.innerHTML = "Export berhasil! File terunduh.";
+    status.innerHTML = `Export berhasil! ${count} produk terunduh.`;
   } catch (error) {
     console.error(error);
     status.innerHTML = "Gagal export: " + error.message;
