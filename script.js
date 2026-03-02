@@ -26,7 +26,6 @@ let storeConfig = null; // Menyimpan konfigurasi toko
 let currentPage = 1;
 const itemsPerPage = 20; // Jumlah produk per halaman
 let currentActiveCategory = 'all'; // Menyimpan kategori yang sedang aktif
-let maxProductPrice = 0; // Harga tertinggi untuk batas slider
 
 // KONFIGURASI BINDERBYTE (SERVER SENDIRI)
 const BINDERBYTE_URL = 'https://servicekomputersurabaya.id/binderbyte.php'; // Pastikan file ini diupload
@@ -81,10 +80,6 @@ async function loadProducts() {
             }
         });
 
-        // Hitung harga tertinggi untuk slider
-        maxProductPrice = Math.max(...products.map(p => p.price), 0);
-        initPriceSlider(maxProductPrice);
-
         // Render Sidebar Kategori
         const categories = [...new Set(products.map(p => p.category))].sort();
         renderCategories(categories);
@@ -108,68 +103,6 @@ async function loadProducts() {
         console.error("Error loading products:", error);
         productList.innerHTML = "<p>Gagal memuat produk dari database.</p>";
     }
-}
-
-// --- LOGIC FILTER HARGA (SLIDER) ---
-function initPriceSlider(maxPrice) {
-    const rangeMin = document.getElementById('range-min');
-    const rangeMax = document.getElementById('range-max');
-    const inputMin = document.getElementById('input-min');
-    const inputMax = document.getElementById('input-max');
-    const track = document.getElementById('slider-track');
-
-    if(!rangeMin) return;
-
-    // Set atribut max
-    rangeMin.max = maxPrice;
-    rangeMax.max = maxPrice;
-    rangeMin.value = 0;
-    rangeMax.value = maxPrice;
-    
-    inputMin.value = 0;
-    inputMax.value = maxPrice;
-
-    function updateSlider() {
-        let minVal = parseInt(rangeMin.value);
-        let maxVal = parseInt(rangeMax.value);
-
-        // Prevent overlap
-        if (maxVal - minVal < 0) {
-            if (this === rangeMin) rangeMin.value = maxVal;
-            else rangeMax.value = minVal;
-        }
-
-        // Update Inputs
-        inputMin.value = rangeMin.value;
-        inputMax.value = rangeMax.value;
-
-        // Update Track Color
-        const percent1 = (rangeMin.value / maxPrice) * 100;
-        const percent2 = (rangeMax.value / maxPrice) * 100;
-        track.style.background = `linear-gradient(to right, #ddd ${percent1}%, #3498db ${percent1}%, #3498db ${percent2}%, #ddd ${percent2}%)`;
-        
-        // Apply Filter (Debounce bisa ditambahkan jika perlu)
-        applyFilters();
-    }
-
-    // Event Listeners Slider
-    rangeMin.addEventListener('input', updateSlider);
-    rangeMax.addEventListener('input', updateSlider);
-
-    // Event Listeners Input Number
-    inputMin.addEventListener('change', function() {
-        let val = Math.min(parseInt(this.value), parseInt(inputMax.value));
-        rangeMin.value = val;
-        updateSlider.call(rangeMin);
-    });
-    inputMax.addEventListener('change', function() {
-        let val = Math.max(parseInt(this.value), parseInt(inputMin.value));
-        rangeMax.value = val;
-        updateSlider.call(rangeMax);
-    });
-    
-    // Init Track
-    updateSlider();
 }
 
 async function loadStoreConfig() {
@@ -281,16 +214,7 @@ function applyFilters() {
         filtered = filtered.filter(p => p.name.toLowerCase().includes(keyword));
     }
 
-    // 3. Filter Harga
-    const inputMin = document.getElementById('input-min');
-    const inputMax = document.getElementById('input-max');
-    if (inputMin && inputMax) {
-        const min = parseInt(inputMin.value) || 0;
-        const max = parseInt(inputMax.value) || maxProductPrice;
-        filtered = filtered.filter(p => p.price >= min && p.price <= max);
-    }
-
-    // 4. Sorting
+    // 3. Sorting
     const sortSelect = document.getElementById('sort-select');
     if (sortSelect) {
         const criteria = sortSelect.value;

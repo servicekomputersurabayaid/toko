@@ -612,6 +612,20 @@
             });
         }
 
+        // --- FITUR NAVBAR HIDE ON SCROLL ---
+        let lastScrollTop = 0;
+        const navbar = document.querySelector('.navbar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            if (scrollTop > lastScrollTop) {
+                navbar.classList.add('navbar-hidden'); // Scroll ke bawah -> Sembunyi
+            } else {
+                navbar.classList.remove('navbar-hidden'); // Scroll ke atas -> Muncul
+            }
+            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // Hindari nilai negatif
+        });
+
         loadDetail();
     </script>
 </body>

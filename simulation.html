@@ -13,7 +13,8 @@
         body { background-color: #f4f4f4; padding-bottom: 50px; }
         
         /* Navbar */
-        .navbar { background: #ffffff; color: #333; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .navbar { background: #ffffff; color: #333; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease-in-out, background-color 0.3s; }
+        .navbar-hidden { transform: translateY(-100%); }
         .logo { font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; }
         .logo img { max-height: 40px; }
         .cart-icon { position: relative; cursor: pointer; }
@@ -48,6 +49,19 @@
         .total { font-weight: bold; font-size: 1.2rem; color: #2c3e50; border-top: 1px solid #ddd; margin-top: 5px; padding-top: 5px;}
         .btn-wa { width: 100%; background: #25D366; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-wa:hover { background: #128C7E; }
+
+        /* Dark Mode Styles */
+        body.dark-mode { background-color: #121212; color: #e0e0e0; }
+        body.dark-mode .navbar, body.dark-mode .product-card, body.dark-mode .modal-content { background-color: #1e1e1e; color: #e0e0e0; }
+        body.dark-mode .product-title { color: #ecf0f1; }
+        body.dark-mode .summary { background-color: #2c2c2c; }
+        body.dark-mode .checkout-form input, body.dark-mode .checkout-form textarea, body.dark-mode .checkout-form select, body.dark-mode .search-box {
+            background-color: #2c2c2c; color: #e0e0e0; border-color: #444;
+        }
+        body.dark-mode .cart-item { border-bottom-color: #444; }
+        body.dark-mode .total { border-top-color: #444; }
+        body.dark-mode .qty-controls button { background-color: #333; color: #fff; }
+        body.dark-mode .logo img { filter: brightness(0) invert(1); }
     </style>
 </head>
 <body>
@@ -55,9 +69,12 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="logo"><img src="assets/logo.png" alt="Service Komputer Surabaya"></div>
-        <div class="cart-icon" id="cart-btn">
-            <span class="material-icons">shopping_cart</span>
-            <span id="cart-count">0</span>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <span class="material-icons" id="dark-mode-toggle" style="cursor:pointer;" title="Ganti Tema">dark_mode</span>
+            <div class="cart-icon" id="cart-btn">
+                <span class="material-icons">shopping_cart</span>
+                <span id="cart-count">0</span>
+            </div>
         </div>
     </nav>
 
@@ -379,6 +396,35 @@ Terima kasih!`;
             const keyword = e.target.value.toLowerCase();
             const filtered = products.filter(p => p.name.toLowerCase().includes(keyword));
             renderProducts(filtered);
+        });
+
+        // --- FITUR DARK MODE ---
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.body.classList.add('dark-mode');
+            if(darkModeToggle) darkModeToggle.innerText = 'light_mode';
+        }
+        if(darkModeToggle) {
+            darkModeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                const isDark = document.body.classList.contains('dark-mode');
+                localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+                darkModeToggle.innerText = isDark ? 'light_mode' : 'dark_mode';
+            });
+        }
+
+        // --- FITUR NAVBAR HIDE ON SCROLL ---
+        let lastScrollTop = 0;
+        const navbar = document.querySelector('.navbar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            if (scrollTop > lastScrollTop) {
+                navbar.classList.add('navbar-hidden');
+            } else {
+                navbar.classList.remove('navbar-hidden');
+            }
+            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
         });
 
         // Init
