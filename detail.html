@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detail Produk - Service Komputer Surabaya ID</title>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Pusat Komputer & Aksesoris Terlengkap di Surabaya. Jual Laptop, PC, Sparepart dengan harga murah dan bergaransi.">
+    <meta property="og:title" content="Detail Produk - Service Komputer Surabaya ID">
+    <meta property="og:description" content="Pusat Komputer & Aksesoris Terlengkap di Surabaya.">
+    <meta property="og:image" content="assets/logo.png">
+    <meta property="og:url" content="">
+    <meta property="og:type" content="product">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="assets/logo-fav.png">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -31,7 +38,13 @@
 
     <!-- Konten Detail -->
     <div class="detail-container">
-        <a href="index.html" style="text-decoration: none; color: #666; display: inline-block; margin-bottom: 20px;">&larr; Kembali ke Katalog</a>
+        <nav aria-label="breadcrumb" class="breadcrumb">
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="#" id="bc-category-link">Kategori</a></li>
+                <li id="bc-product-name" aria-current="page">Loading...</li>
+            </ul>
+        </nav>
         <input type="text" id="search-input" class="search-box" placeholder="Cari produk lain... (Tekan Enter)">
         
         <div id="loading" style="text-align: center; padding: 50px;">Memuat detail produk...</div>
@@ -46,6 +59,7 @@
             <!-- Info -->
             <div class="detail-info">
                 <h1 id="d-title">Nama Produk</h1>
+                <div id="rating-summary" class="rating-summary"></div>
                 <div id="d-price" class="detail-price">Rp 0</div>
                 
                 <div class="detail-desc">
@@ -72,6 +86,33 @@
                 </div>
             </div>
         </div>
+
+        <!-- Bagian Ulasan / Review -->
+        <div class="reviews-section">
+            <h3 style="margin-bottom: 20px; color: var(--text-heading);">Ulasan Pembeli</h3>
+            
+            <!-- Form Ulasan (Hanya muncul jika login) -->
+            <div id="review-form-container" class="review-form" style="display: none;">
+                <h4 style="margin-bottom: 10px;">Tulis Ulasan Anda</h4>
+                <div class="star-input" id="star-input">
+                    <span class="material-icons" data-value="1">star</span>
+                    <span class="material-icons" data-value="2">star</span>
+                    <span class="material-icons" data-value="3">star</span>
+                    <span class="material-icons" data-value="4">star</span>
+                    <span class="material-icons" data-value="5">star</span>
+                </div>
+                <textarea id="review-text" class="search-box" rows="3" placeholder="Bagaimana kualitas produk ini? Ceritakan pengalaman Anda..."></textarea>
+                <button id="btn-submit-review" class="btn-add" style="width: auto; padding: 10px 20px;">Kirim Ulasan</button>
+            </div>
+            <div id="login-to-review" style="margin-bottom: 30px; padding: 15px; background: var(--bg-body); border-radius: 8px; text-align: center;">
+                <p>Silakan <a href="index.html" style="color: #3498db; font-weight: bold;">Login</a> untuk menulis ulasan.</p>
+            </div>
+
+            <!-- Daftar Ulasan -->
+            <div id="review-list" class="review-list">
+                <p>Belum ada ulasan untuk produk ini.</p>
+            </div>
+        </div>
     </div>
 
     <!-- Produk Lainnya -->
@@ -93,7 +134,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, query, limit, where, addDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -107,16 +149,70 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // Ambil ID dari URL (?id=...)
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
 
         let currentProduct = null;
+        let currentUser = null;
         let cart = JSON.parse(localStorage.getItem("cart")) || [];
         let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
         document.getElementById('cart-count').innerText = cart.reduce((acc, item) => acc + item.qty, 0);
         document.getElementById('wishlist-count').innerText = wishlist.length;
+
+        function updateSEO(product) {
+            const priceStr = product.price.toLocaleString('id-ID');
+            
+            // Update Title Browser
+            document.title = `Jual ${product.name} Murah - Service Komputer Surabaya`;
+            
+            // Bersihkan deskripsi dari HTML tags untuk meta tag
+            let cleanDesc = product.description.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
+            if (cleanDesc.length > 160) cleanDesc = cleanDesc.substring(0, 157) + "...";
+
+            // Update Meta Description
+            const desc = `Jual ${product.name}. Harga Rp ${priceStr}. ${cleanDesc} Bergaransi & Berkualitas.`;
+            
+            let metaDesc = document.querySelector('meta[name="description"]');
+            if (metaDesc) metaDesc.setAttribute("content", desc);
+
+            // Update Open Graph (untuk share WA/FB)
+            const setOg = (prop, val) => {
+                let el = document.querySelector(`meta[property="${prop}"]`);
+                if (el) el.setAttribute("content", val);
+            };
+
+            setOg("og:title", `Jual ${product.name} - Rp ${priceStr}`);
+            setOg("og:description", desc);
+            setOg("og:url", window.location.href);
+            if (product.image) setOg("og:image", product.image);
+        }
+
+        function updateBreadcrumb(product) {
+            const bcCategoryLink = document.getElementById('bc-category-link');
+            const bcProductName = document.getElementById('bc-product-name');
+            
+            bcCategoryLink.innerText = product.category;
+            bcCategoryLink.href = `index.html?category=${encodeURIComponent(product.category)}`;
+            bcProductName.innerText = product.name;
+
+            // Add JSON-LD Schema for Breadcrumb (SEO Rich Snippet)
+            const schema = {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("index.html", window.location.href).href },
+                    { "@type": "ListItem", "position": 2, "name": product.category, "item": new URL(`index.html?category=${encodeURIComponent(product.category)}`, window.location.href).href },
+                    { "@type": "ListItem", "position": 3, "name": product.name }
+                ]
+            };
+            const script = document.createElement('script');
+            script.type = 'application/ld+json';
+            script.text = JSON.stringify(schema);
+            document.head.appendChild(script);
+        }
 
         async function loadDetail() {
             if (!productId) {
@@ -145,8 +241,13 @@
                         originalPrice: parseInt(data.harga_diskon || 0),
                         image: data.image_url,
                         images: data.images || [data.image_url], // Ambil array images atau fallback ke single image
-                        description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi."
+                        description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi.",
+                        category: data.kategori || "Umum"
                     };
+
+                    // Update SEO Tags
+                    updateSEO(currentProduct);
+                    updateBreadcrumb(currentProduct);
 
                     // Render ke HTML
                     document.getElementById('d-image').src = currentProduct.image;
@@ -184,7 +285,8 @@
 
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('detail-content').style.display = 'grid';
-                    loadRelatedProducts(currentProduct.id);
+                    loadRelatedProducts(currentProduct);
+                    loadReviews(currentProduct.id);
                 } else {
                     document.getElementById('loading').innerText = "Produk tidak ditemukan di database.";
                 }
@@ -213,17 +315,18 @@
             document.getElementById("zoom-modal").style.display = "none";
         }
 
-        async function loadRelatedProducts(currentId) {
+        async function loadRelatedProducts(product) {
             const relatedContainer = document.getElementById('related-products');
             try {
-                // Ambil 5 produk dari database
-                const q = query(collection(db, "products"), limit(5));
+                // Query produk berdasarkan kategori yang sama, limit 6 (untuk jaga-jaga jika produk yg sama terambil)
+                const q = query(collection(db, "products"), where("kategori", "==", product.category), limit(6));
                 const querySnapshot = await getDocs(q);
                 
                 let html = "";
+                let count = 0;
                 querySnapshot.forEach((doc) => {
-                    // Jangan tampilkan produk yang sedang dibuka
-                    if(doc.id === currentId) return;
+                    // Jangan tampilkan produk yang sedang dibuka & batasi max 4 produk
+                    if(doc.id === product.id || count >= 4) return;
 
                     const p = doc.data();
                     const name = p.judul || p.name || "Produk";
@@ -244,8 +347,14 @@
                             </div>
                         </div>
                     `;
+                    count++;
                 });
-                relatedContainer.innerHTML = html;
+                
+                if (html === "") {
+                    relatedContainer.innerHTML = "<p>Tidak ada produk terkait lainnya.</p>";
+                } else {
+                    relatedContainer.innerHTML = html;
+                }
 
                 // Event listener untuk tombol di produk terkait
                 relatedContainer.querySelectorAll('.btn-related').forEach(btn => {
@@ -258,6 +367,131 @@
                 relatedContainer.innerHTML = "<p>Gagal memuat produk lain.</p>";
             }
         }
+
+        // --- FITUR ULASAN / REVIEW ---
+        let selectedRating = 0;
+
+        // Handle Star Input Click
+        document.querySelectorAll('#star-input .material-icons').forEach(star => {
+            star.addEventListener('click', function() {
+                selectedRating = parseInt(this.dataset.value);
+                updateStarInputUI(selectedRating);
+            });
+        });
+
+        function updateStarInputUI(rating) {
+            document.querySelectorAll('#star-input .material-icons').forEach(star => {
+                const val = parseInt(star.dataset.value);
+                if (val <= rating) {
+                    star.classList.add('active');
+                    star.innerText = 'star';
+                } else {
+                    star.classList.remove('active');
+                    star.innerText = 'star_border';
+                }
+            });
+        }
+
+        async function submitReview() {
+            if (!currentUser) return alert("Silakan login terlebih dahulu.");
+            if (selectedRating === 0) return alert("Silakan pilih bintang rating.");
+            const text = document.getElementById('review-text').value;
+
+            try {
+                await addDoc(collection(db, "products", productId, "reviews"), {
+                    userId: currentUser.uid,
+                    userName: currentUser.email.split('@')[0], // Atau ambil dari profil user
+                    rating: selectedRating,
+                    comment: text,
+                    createdAt: serverTimestamp()
+                });
+                
+                showToast("Ulasan berhasil dikirim!");
+                document.getElementById('review-text').value = '';
+                selectedRating = 0;
+                updateStarInputUI(0);
+                loadReviews(productId); // Reload ulasan
+            } catch (e) {
+                console.error(e);
+                alert("Gagal mengirim ulasan.");
+            }
+        }
+
+        document.getElementById('btn-submit-review').addEventListener('click', submitReview);
+
+        async function loadReviews(pid) {
+            const list = document.getElementById('review-list');
+            const summary = document.getElementById('rating-summary');
+            
+            try {
+                const q = query(collection(db, "products", pid, "reviews"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    list.innerHTML = "<p>Belum ada ulasan. Jadilah yang pertama mengulas!</p>";
+                    summary.innerHTML = "";
+                    return;
+                }
+
+                let html = "";
+                let totalRating = 0;
+                let count = 0;
+
+                querySnapshot.forEach((doc) => {
+                    const r = doc.data();
+                    totalRating += r.rating;
+                    count++;
+                    const date = r.createdAt ? new Date(r.createdAt.seconds * 1000).toLocaleDateString('id-ID') : '';
+
+                    html += `
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div class="review-user">
+                                    <span class="material-icons" style="font-size:1.2rem; color:#888;">account_circle</span>
+                                    ${r.userName}
+                                </div>
+                                <small>${date}</small>
+                            </div>
+                            <div style="color:#f39c12; margin-bottom:5px;">${renderStars(r.rating)}</div>
+                            <div class="review-text">${r.comment}</div>
+                        </div>
+                    `;
+                });
+
+                list.innerHTML = html;
+                
+                // Hitung Rata-rata
+                const avg = (totalRating / count).toFixed(1);
+                summary.innerHTML = `
+                    <span class="material-icons star-filled">star</span>
+                    <span>${avg}</span>
+                    <span style="color:#666; font-weight:normal; font-size:0.9rem; margin-left:5px;">(${count} Ulasan)</span>
+                `;
+
+            } catch (e) {
+                console.error("Gagal load reviews:", e);
+            }
+        }
+
+        function renderStars(rating) {
+            let stars = "";
+            for (let i = 1; i <= 5; i++) {
+                stars += `<span class="material-icons" style="font-size:1.1rem;">${i <= rating ? 'star' : 'star_border'}</span>`;
+            }
+            return stars;
+        }
+
+        // Auth Listener untuk Form Review
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                document.getElementById('review-form-container').style.display = 'block';
+                document.getElementById('login-to-review').style.display = 'none';
+            } else {
+                document.getElementById('review-form-container').style.display = 'none';
+                document.getElementById('login-to-review').style.display = 'block';
+            }
+        });
 
         function addToCart(id, name, price, image) {
             const existingItem = cart.find(item => item.id === id);

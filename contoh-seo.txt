@@ -1,0 +1,18 @@
+ function updateSEO(data) {
+        // Update Title Browser
+        document.title = `Jual ${data.brand} ${data.model} Murah - Service Komputer Surabaya`;
+        
+        // Update Meta Description
+        const desc = `Jual Laptop Second ${data.brand} ${data.model}. Spesifikasi: ${data.processor}, RAM ${data.ram}, ${data.storage}. Harga ${formatRupiah(data.price)}. Bergaransi & Berkualitas.`;
+        document.querySelector('meta[name="description"]').setAttribute("content", desc);
+
+        // Update Open Graph (untuk share WA/FB)
+        document.querySelector('meta[property="og:title"]').setAttribute("content", `Jual ${data.brand} ${data.model} - ${formatRupiah(data.price)}`);
+        document.querySelector('meta[property="og:description"]').setAttribute("content", desc);
+        document.querySelector('meta[property="og:url"]').setAttribute("content", window.location.href);
+        
+        if (data.images && data.images.length > 0) {
+            let imgUrl = Array.isArray(data.images) ? data.images[0] : data.images.split('|')[0];
+            document.querySelector('meta[property="og:image"]').setAttribute("content", imgUrl);
+        }
+    }

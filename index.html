@@ -118,6 +118,21 @@
             </select>
         </div>
         
+        <!-- Filter Harga (Range Slider) -->
+        <div class="filter-container">
+            <label style="font-weight:bold; font-size:0.9rem; display:block; margin-bottom:10px;">Filter Budget:</label>
+            <div class="range-slider">
+                <div class="slider-track" id="slider-track"></div>
+                <input type="range" id="range-min" min="0" max="100" value="0">
+                <input type="range" id="range-max" min="0" max="100" value="100">
+            </div>
+            <div class="price-inputs">
+                <input type="number" id="input-min" value="0" placeholder="Min">
+                <span style="align-self:center;">-</span>
+                <input type="number" id="input-max" value="0" placeholder="Max">
+            </div>
+        </div>
+
         <!-- Menu Kategori Horizontal -->
         <div id="category-list" class="category-menu"></div>
 

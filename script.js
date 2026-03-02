@@ -26,6 +26,7 @@ let storeConfig = null; // Menyimpan konfigurasi toko
 let currentPage = 1;
 const itemsPerPage = 20; // Jumlah produk per halaman
 let currentActiveCategory = 'all'; // Menyimpan kategori yang sedang aktif
+let maxProductPrice = 0; // Harga tertinggi untuk batas slider
 
 // KONFIGURASI BINDERBYTE (SERVER SENDIRI)
 const BINDERBYTE_URL = 'https://servicekomputersurabaya.id/binderbyte.php'; // Pastikan file ini diupload
@@ -80,6 +81,10 @@ async function loadProducts() {
             }
         });
 
+        // Hitung harga tertinggi untuk slider
+        maxProductPrice = Math.max(...products.map(p => p.price), 0);
+        initPriceSlider(maxProductPrice);
+
         // Render Sidebar Kategori
         const categories = [...new Set(products.map(p => p.category))].sort();
         renderCategories(categories);
@@ -87,19 +92,84 @@ async function loadProducts() {
         // Cek apakah ada pencarian dari URL (misal redirect dari detail.html)
         const params = new URLSearchParams(window.location.search);
         const query = params.get('q');
+        const category = params.get('category');
         const searchInput = document.getElementById('search-input');
 
         if (query && searchInput) {
             searchInput.value = query;
             handleSearch(query);
+        } else if (category) {
+            filterCategory(category);
         } else {
-            renderProducts();
+            applyFilters(); // Ganti renderProducts dengan applyFilters agar slider aktif
         }
 
     } catch (error) {
         console.error("Error loading products:", error);
         productList.innerHTML = "<p>Gagal memuat produk dari database.</p>";
     }
+}
+
+// --- LOGIC FILTER HARGA (SLIDER) ---
+function initPriceSlider(maxPrice) {
+    const rangeMin = document.getElementById('range-min');
+    const rangeMax = document.getElementById('range-max');
+    const inputMin = document.getElementById('input-min');
+    const inputMax = document.getElementById('input-max');
+    const track = document.getElementById('slider-track');
+
+    if(!rangeMin) return;
+
+    // Set atribut max
+    rangeMin.max = maxPrice;
+    rangeMax.max = maxPrice;
+    rangeMin.value = 0;
+    rangeMax.value = maxPrice;
+    
+    inputMin.value = 0;
+    inputMax.value = maxPrice;
+
+    function updateSlider() {
+        let minVal = parseInt(rangeMin.value);
+        let maxVal = parseInt(rangeMax.value);
+
+        // Prevent overlap
+        if (maxVal - minVal < 0) {
+            if (this === rangeMin) rangeMin.value = maxVal;
+            else rangeMax.value = minVal;
+        }
+
+        // Update Inputs
+        inputMin.value = rangeMin.value;
+        inputMax.value = rangeMax.value;
+
+        // Update Track Color
+        const percent1 = (rangeMin.value / maxPrice) * 100;
+        const percent2 = (rangeMax.value / maxPrice) * 100;
+        track.style.background = `linear-gradient(to right, #ddd ${percent1}%, #3498db ${percent1}%, #3498db ${percent2}%, #ddd ${percent2}%)`;
+        
+        // Apply Filter (Debounce bisa ditambahkan jika perlu)
+        applyFilters();
+    }
+
+    // Event Listeners Slider
+    rangeMin.addEventListener('input', updateSlider);
+    rangeMax.addEventListener('input', updateSlider);
+
+    // Event Listeners Input Number
+    inputMin.addEventListener('change', function() {
+        let val = Math.min(parseInt(this.value), parseInt(inputMax.value));
+        rangeMin.value = val;
+        updateSlider.call(rangeMin);
+    });
+    inputMax.addEventListener('change', function() {
+        let val = Math.max(parseInt(this.value), parseInt(inputMin.value));
+        rangeMax.value = val;
+        updateSlider.call(rangeMax);
+    });
+    
+    // Init Track
+    updateSlider();
 }
 
 async function loadStoreConfig() {
@@ -137,15 +207,23 @@ window.filterCategory = function(category, element) {
     // Update active class
     const links = document.querySelectorAll('.cat-link');
     links.forEach(link => link.classList.remove('active'));
-    if(element) element.classList.add('active');
+    
+    if(element) {
+        element.classList.add('active');
+    } else {
+        for(const link of links) {
+            if(link.innerText === category || (category === 'all' && link.innerText === 'Semua Produk')) {
+                link.classList.add('active');
+                break;
+            }
+        }
+    }
     
     currentActiveCategory = category;
     const subCatContainer = document.getElementById('subcategory-list');
 
     if (category === 'all') {
         subCatContainer.style.display = 'none'; // Sembunyikan sub-kategori jika 'Semua'
-        currentPage = 1;
-        renderProducts(products, true);
     } else {
         const filtered = products.filter(p => p.category === category);
         
@@ -162,10 +240,10 @@ window.filterCategory = function(category, element) {
         } else {
             subCatContainer.style.display = 'none';
         }
-
-        currentPage = 1;
-        renderProducts(filtered, true);
     }
+    
+    // Panggil applyFilters untuk merender ulang dengan mempertimbangkan semua filter
+    applyFilters();
 }
 
 window.filterSubCategory = function(subCategory, element) {
@@ -175,13 +253,55 @@ window.filterSubCategory = function(subCategory, element) {
     links.forEach(link => link.classList.remove('active'));
     if(element) element.classList.add('active');
 
-    let filtered = products.filter(p => p.category === currentActiveCategory);
+    // Kita simpan sub-kategori aktif di atribut dataset container agar bisa dibaca applyFilters
+    container.dataset.activeSub = subCategory;
+    applyFilters();
+}
 
-    if (subCategory !== 'all') {
-        filtered = filtered.filter(p => p.subCategory === subCategory);
+// --- FUNGSI UTAMA FILTERING (GABUNGAN) ---
+function applyFilters() {
+    let filtered = [...products];
+
+    // 1. Filter Kategori
+    if (currentActiveCategory !== 'all') {
+        filtered = filtered.filter(p => p.category === currentActiveCategory);
+        
+        // Filter Sub-Kategori (jika ada)
+        const subCatContainer = document.getElementById('subcategory-list');
+        const activeSub = subCatContainer.dataset.activeSub || 'all';
+        if (activeSub !== 'all') {
+            filtered = filtered.filter(p => p.subCategory === activeSub);
+        }
     }
 
-    currentPage = 1;
+    // 2. Filter Search
+    const searchInput = document.getElementById('search-input');
+    if (searchInput && searchInput.value) {
+        const keyword = searchInput.value.toLowerCase();
+        filtered = filtered.filter(p => p.name.toLowerCase().includes(keyword));
+    }
+
+    // 3. Filter Harga
+    const inputMin = document.getElementById('input-min');
+    const inputMax = document.getElementById('input-max');
+    if (inputMin && inputMax) {
+        const min = parseInt(inputMin.value) || 0;
+        const max = parseInt(inputMax.value) || maxProductPrice;
+        filtered = filtered.filter(p => p.price >= min && p.price <= max);
+    }
+
+    // 4. Sorting
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) {
+        const criteria = sortSelect.value;
+        if (criteria === 'price-asc') filtered.sort((a, b) => a.price - b.price);
+        else if (criteria === 'price-desc') filtered.sort((a, b) => b.price - a.price);
+        else if (criteria === 'name-asc') filtered.sort((a, b) => a.name.localeCompare(b.name));
+        else if (criteria === 'name-desc') filtered.sort((a, b) => b.name.localeCompare(a.name));
+    }
+
+    // Render
+    currentPage = 1; // Reset ke halaman 1 setiap filter berubah
     renderProducts(filtered, true);
 }
 
@@ -277,33 +397,11 @@ function setupPagination(data) {
 }
 
 function handleSearch(keyword) {
-    const filtered = products.filter(p => p.name.toLowerCase().includes(keyword.toLowerCase()));
-    currentPage = 1;
-    renderProducts(filtered, true);
+    applyFilters();
 }
 
 function sortProducts(criteria) {
-    let sortedProducts = [...products]; // Copy array agar tidak merusak urutan asli jika perlu reset
-    
-    switch (criteria) {
-        case 'price-asc':
-            sortedProducts.sort((a, b) => a.price - b.price);
-            break;
-        case 'price-desc':
-            sortedProducts.sort((a, b) => b.price - a.price);
-            break;
-        case 'name-asc':
-            sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
-            break;
-        case 'name-desc':
-            sortedProducts.sort((a, b) => b.name.localeCompare(a.name));
-            break;
-        default:
-            // Default urutan (biasanya berdasarkan ID atau waktu load)
-            break;
-    }
-    currentPage = 1;
-    renderProducts(sortedProducts, true);
+    applyFilters();
 }
 
 // Event Listener Search
