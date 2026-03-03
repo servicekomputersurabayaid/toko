@@ -93,6 +93,8 @@
     .btn-edit:hover { background-color: #e67e22; }
     .btn-delete { background-color: #e74c3c; color: white; border: none; }
     .btn-delete:hover { background-color: #c0392b; }
+    .btn-view { background-color: #3498db; color: white; border: none; }
+    .btn-view:hover { background-color: #2980b9; }
     
     /* Forms & Inputs in Admin */
     input[type="text"], input[type="number"], input[type="email"], textarea, select {
@@ -951,6 +953,7 @@ async function loadProducts() {
           <td>Rp ${p.harga}</td>
           <td><span style="padding: 4px 8px; border-radius: 4px; background: ${badgeColor}; color: ${textColor}; font-size: 0.85rem; text-transform: capitalize;">${status}</span></td>
           <td>
+            <button class="btn btn-view" onclick="window.open('detail.html?id=${doc.id}', '_blank')">Lihat</button>
             <button class="btn btn-edit" onclick="editProduct('${doc.id}')">Edit</button>
             <button class="btn btn-delete" onclick="deleteProduct('${doc.id}')">Hapus</button>
           </td>
