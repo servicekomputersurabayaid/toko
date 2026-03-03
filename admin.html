@@ -229,6 +229,12 @@
   </select>
   <label>Deskripsi Singkat:</label><input type="text" id="editDescShort">
   <label>Deskripsi Panjang:</label><textarea id="editDescLong"></textarea>
+  
+  <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+  <label style="font-weight:bold;">Varian Produk (Opsional):</label>
+  <div id="variantContainer" style="margin-bottom: 10px;"></div>
+  <button onclick="addVariantRow()" style="background:#3498db; color:white; border:none; padding:8px 12px; margin-bottom:15px; font-size:0.85rem; border-radius:4px; cursor:pointer;">+ Tambah Varian</button>
+
   <button onclick="saveEdit()">Simpan</button>
   <button onclick="cancelEdit()">Batal</button>
 </div>
@@ -474,6 +480,22 @@ window.uploadCSV = async function(){
     const rawImg = data.image_url || "";
     const imgList = rawImg.split("|").map(s => s.trim()).filter(s => s);
     
+    // Parse Variants (Format: Nama=Harga=Berat;Nama2=Harga2=Berat2)
+    let parsedVariants = [];
+    if(data.variants) {
+        parsedVariants = data.variants.split(";").map(v => {
+            const parts = v.split("=");
+            if(parts.length >= 1) {
+                return {
+                    name: parts[0].trim(),
+                    price: parseInt(parts[1]) || parseInt(data.harga) || 0, // Fallback ke harga utama
+                    weight: parseInt(parts[2]) || parseInt(data.berat) || 1000 // Fallback ke berat utama
+                };
+            }
+            return null;
+        }).filter(v => v);
+    }
+
     const productData = {
       judul: data.judul || data.name || "",
       deskripsi_singkat: cleanHTML(data.deskripsi_singkat || ""),
@@ -487,6 +509,7 @@ window.uploadCSV = async function(){
       images: imgList, // Simpan semua gambar dalam array
       status: data.status || "active", // Gunakan status dari CSV jika ada
       active: (data.status === 'active' || !data.status), // Sync active boolean (true jika active atau kosong)
+      variants: parsedVariants // Simpan varian
     };
 
     // Cek apakah ID ada di CSV atau Judul sudah ada di database
@@ -530,7 +553,7 @@ window.exportCSV = async function() {
     const querySnapshot = await getDocs(collection(db, "products"));
     
     // Header CSV yang sesuai dengan format upload (agar bisa di-import lagi)
-    const headers = ["id", "judul", "kategori", "sub_kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status"];
+    const headers = ["id", "judul", "kategori", "sub_kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status", "variants"];
     let csvContent = headers.join(",") + "\n";
     let count = 0;
 
@@ -559,6 +582,15 @@ window.exportCSV = async function() {
         // Handle Multiple Images untuk Export
         if(fieldName === 'image_url') {
             val = (data.images && data.images.length > 0) ? data.images.join(" | ") : (data.image_url || "");
+        }
+
+        // Handle Variants untuk Export (Format: Nama=Harga=Berat;...)
+        if(fieldName === 'variants') {
+            if(data.variants && Array.isArray(data.variants)) {
+                val = data.variants.map(v => `${v.name}=${v.price}=${v.weight}`).join(";");
+            } else {
+                val = "";
+            }
         }
         
         // Bersihkan karakter non-printable (ASCII 0-31 kecuali newline/tab, dan 127)
@@ -1002,9 +1034,35 @@ window.editProduct = function(id) {
   document.getElementById("editStatus").value = p.status || (p.active === false ? "inactive" : "active");
   document.getElementById("editDescShort").value = p.deskripsi_singkat || "";
   document.getElementById("editDescLong").value = p.deskripsi_panjang || "";
+
+  // Populate Variants
+  const container = document.getElementById("variantContainer");
+  container.innerHTML = ""; // Clear previous
+  if (p.variants && Array.isArray(p.variants)) {
+      p.variants.forEach(v => addVariantRow(v.name, v.price, v.weight));
+  }
   
   document.getElementById("editForm").style.display = "block";
   document.getElementById("overlay").style.display = "block";
+}
+
+window.addVariantRow = function(name='', price='', weight='') {
+    const container = document.getElementById("variantContainer");
+    const div = document.createElement('div');
+    div.className = 'variant-row';
+    div.style = "display:flex; gap:5px; margin-bottom:5px; align-items:center;";
+    
+    // Default price/weight ambil dari input utama jika kosong (untuk baris baru)
+    if(price === '' && document.getElementById('editHarga').value) price = document.getElementById('editHarga').value;
+    if(weight === '' && document.getElementById('editBerat').value) weight = document.getElementById('editBerat').value;
+
+    div.innerHTML = `
+        <input type="text" placeholder="Nama Varian (ex: Merah)" class="var-name" value="${name}" style="margin:0; flex:2;">
+        <input type="number" placeholder="Harga" class="var-price" value="${price}" style="margin:0; flex:1;">
+        <input type="number" placeholder="Berat(g)" class="var-weight" value="${weight}" style="margin:0; flex:1;">
+        <button onclick="this.parentElement.remove()" style="background:#e74c3c; color:white; border:none; padding:10px; cursor:pointer; border-radius:4px;">X</button>
+    `;
+    container.appendChild(div);
 }
 
 window.saveEdit = async function() {
@@ -1012,6 +1070,18 @@ window.saveEdit = async function() {
   const rawImg = document.getElementById("editImage").value;
   const imgList = rawImg.split("|").map(s => s.trim()).filter(s => s);
   const status = document.getElementById("editStatus").value;
+
+  // Collect Variants
+  const variantRows = document.querySelectorAll('.variant-row');
+  let variants = [];
+  variantRows.forEach(row => {
+      const name = row.querySelector('.var-name').value;
+      const price = parseInt(row.querySelector('.var-price').value) || 0;
+      const weight = parseInt(row.querySelector('.var-weight').value) || 0;
+      if(name) {
+          variants.push({ name, price, weight });
+      }
+  });
 
   const updateData = {
     judul: document.getElementById("editJudul").value,
@@ -1025,7 +1095,8 @@ window.saveEdit = async function() {
     status: status,
     active: (status === 'active'), // Sync active boolean agar kompatibel
     deskripsi_singkat: document.getElementById("editDescShort").value,
-    deskripsi_panjang: document.getElementById("editDescLong").value
+    deskripsi_panjang: document.getElementById("editDescLong").value,
+    variants: variants
   };
   
   await updateDoc(doc(db, "products", id), updateData);

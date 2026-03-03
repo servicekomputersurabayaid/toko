@@ -62,6 +62,12 @@
                 <div id="rating-summary" class="rating-summary"></div>
                 <div id="d-price" class="detail-price">Rp 0</div>
                 
+                <!-- Container Varian -->
+                <div id="variant-section" style="margin-bottom: 20px; display:none;">
+                    <p style="font-weight:bold; margin-bottom:8px; color:var(--text-heading);">Pilih Varian:</p>
+                    <div id="variant-options" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+                </div>
+
                 <div class="detail-desc">
                     <h3>Deskripsi:</h3>
                     <p id="d-desc">Keterangan produk...</p>
@@ -156,6 +162,7 @@
         const productId = urlParams.get('id');
 
         let currentProduct = null;
+        let selectedVariant = null; // Menyimpan varian yang sedang dipilih
         let currentUser = null;
         let cart = JSON.parse(localStorage.getItem("cart")) || [];
         let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
@@ -243,7 +250,8 @@
                         weight: parseInt(data.berat || data.weight || 1000),
                         images: data.images || [data.image_url], // Ambil array images atau fallback ke single image
                         description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi.",
-                        category: data.kategori || "Umum"
+                        category: data.kategori || "Umum",
+                        variants: data.variants || data.varian || [] // Ambil data varian
                     };
 
                     // Update SEO Tags
@@ -279,6 +287,20 @@
                         thumbContainer.innerHTML = ''; // Kosongkan jika cuma 1 gambar
                     }
 
+                    // Render Varian jika ada
+                    const varSection = document.getElementById('variant-section');
+                    const varOptions = document.getElementById('variant-options');
+                    
+                    if (currentProduct.variants.length > 0) {
+                        varSection.style.display = 'block';
+                        varOptions.innerHTML = currentProduct.variants.map((v, i) => `
+                            <button class="btn-variant" onclick="selectVariant(${i})" 
+                            style="padding:8px 16px; border:1px solid #ddd; background:var(--bg-card); color:var(--text-main); border-radius:4px; cursor:pointer; transition:0.2s;">
+                            ${v.name}
+                            </button>
+                        `).join('');
+                    }
+
                     // Update tombol wishlist jika sudah ada
                     const isWishlist = wishlist.some(item => item.id === currentProduct.id);
                     const wishBtn = document.getElementById('btn-wishlist-detail');
@@ -295,6 +317,32 @@
                 console.error(error);
                 document.getElementById('loading').innerText = "Terjadi kesalahan memuat data.";
             }
+        }
+
+        // Fungsi Pilih Varian (Global agar bisa dipanggil onclick)
+        window.selectVariant = function(index) {
+            if (!currentProduct || !currentProduct.variants[index]) return;
+            
+            selectedVariant = currentProduct.variants[index];
+            
+            // Update Tampilan Tombol
+            document.querySelectorAll('.btn-variant').forEach((btn, i) => {
+                if(i === index) {
+                    btn.style.borderColor = '#3498db';
+                    btn.style.backgroundColor = '#e8f4fc';
+                    btn.style.color = '#3498db';
+                    btn.style.fontWeight = 'bold';
+                } else {
+                    btn.style.borderColor = '#ddd';
+                    btn.style.backgroundColor = 'var(--bg-card)';
+                    btn.style.color = 'var(--text-main)';
+                    btn.style.fontWeight = 'normal';
+                }
+            });
+
+            // Update Harga Tampil
+            const price = parseInt(selectedVariant.price || currentProduct.price);
+            document.getElementById('d-price').innerText = "Rp " + price.toLocaleString('id-ID');
         }
 
         // Fungsi Ganti Gambar Utama
@@ -508,7 +556,26 @@
         }
 
         document.getElementById('btn-add-detail').addEventListener('click', () => {
-            if (currentProduct) addToCart(currentProduct.id, currentProduct.name, currentProduct.price, currentProduct.image, currentProduct.weight);
+            if (currentProduct) {
+                let finalId = currentProduct.id;
+                let finalName = currentProduct.name;
+                let finalPrice = currentProduct.price;
+                let finalWeight = currentProduct.weight;
+
+                // Logika jika ada varian
+                if (currentProduct.variants.length > 0) {
+                    if (!selectedVariant) {
+                        alert("Silakan pilih varian (warna/ukuran) terlebih dahulu!");
+                        return;
+                    }
+                    finalId = currentProduct.id + "-" + selectedVariant.name.replace(/\s+/g, '-'); // ID Unik untuk keranjang
+                    finalName = currentProduct.name + " (" + selectedVariant.name + ")";
+                    finalPrice = parseInt(selectedVariant.price);
+                    finalWeight = parseInt(selectedVariant.weight || currentProduct.weight);
+                }
+
+                addToCart(finalId, finalName, finalPrice, currentProduct.image, finalWeight);
+            }
         });
 
         // Logic Tanya Stok via WA
