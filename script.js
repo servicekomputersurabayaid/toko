@@ -1297,6 +1297,7 @@ onAuthStateChanged(auth, (user) => {
         const btnMobileAdmin = document.getElementById('btn-mobile-admin');
         if(btnMobileAdmin) btnMobileAdmin.style.display = 'none';
         userNameDisplay.style.display = 'none';
+        document.body.classList.remove('admin-mode');
     }
 });
 
@@ -1322,8 +1323,16 @@ async function checkAdminStatus(user) {
         document.getElementById('btn-admin-nav').style.display = 'block';
         const btnMobileAdmin = document.getElementById('btn-mobile-admin');
         if(btnMobileAdmin) btnMobileAdmin.style.display = 'block';
+        document.body.classList.add('admin-mode');
     }
 }
+
+// Prevent Right Click (Global) - Kecuali Admin
+document.addEventListener('contextmenu', event => {
+    if (!document.body.classList.contains('admin-mode')) {
+        event.preventDefault();
+    }
+});
 
 // Toast Function
 window.showToast = function(message) {

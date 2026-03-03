@@ -532,14 +532,34 @@
         }
 
         // Auth Listener untuk Form Review
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             currentUser = user;
             if (user) {
                 document.getElementById('review-form-container').style.display = 'block';
                 document.getElementById('login-to-review').style.display = 'none';
+                
+                // Cek Admin untuk Proteksi Copy
+                let adminEmail = "support@servicekomputersurabaya.id";
+                try {
+                    const docRef = doc(db, "settings", "store_config");
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists() && docSnap.data().adminEmail) {
+                        adminEmail = docSnap.data().adminEmail;
+                    }
+                } catch(e) {}
+
+                if (user.email === adminEmail) document.body.classList.add('admin-mode');
             } else {
                 document.getElementById('review-form-container').style.display = 'none';
                 document.getElementById('login-to-review').style.display = 'block';
+                document.body.classList.remove('admin-mode');
+            }
+        });
+
+        // Prevent Right Click (Global) - Kecuali Admin
+        document.addEventListener('contextmenu', event => {
+            if (!document.body.classList.contains('admin-mode')) {
+                event.preventDefault();
             }
         });
 
