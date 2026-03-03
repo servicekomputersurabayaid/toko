@@ -15,7 +15,7 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // Ganti dengan domain asli Anda
-const YOUR_DOMAIN = "https://servicekomputersurabaya.id";
+const YOUR_DOMAIN = "https://toko.servicekomputersurabaya.id";
 
 exports.sitemap = onRequest(async (req, res) => {
   try {
