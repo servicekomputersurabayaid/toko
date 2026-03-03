@@ -240,6 +240,7 @@
                         price: parseInt(data.harga || data.price),
                         originalPrice: parseInt(data.harga_diskon || 0),
                         image: data.image_url,
+                        weight: parseInt(data.berat || data.weight || 1000),
                         images: data.images || [data.image_url], // Ambil array images atau fallback ke single image
                         description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi.",
                         category: data.kategori || "Umum"
@@ -332,6 +333,7 @@
                     const name = p.judul || p.name || "Produk";
                     const price = parseInt(p.harga || p.price || 0);
                     const image = p.image_url || "https://via.placeholder.com/150";
+                    const weight = parseInt(p.berat || p.weight || 1000);
 
                     html += `
                         <div class="product-card">
@@ -341,7 +343,7 @@
                             <div class="product-info">
                                 <h3 class="product-title" onclick="window.location.href='detail.html?id=${doc.id}'" style="cursor:pointer">${name}</h3>
                                 <p class="product-price">Rp ${price.toLocaleString('id-ID')}</p>
-                                <button class="btn-add btn-related" data-id="${doc.id}" data-name="${name}" data-price="${price}" data-image="${image}">
+                                <button class="btn-add btn-related" data-id="${doc.id}" data-name="${name}" data-price="${price}" data-image="${image}" data-weight="${weight}">
                                     + Keranjang
                                 </button>
                             </div>
@@ -359,7 +361,7 @@
                 // Event listener untuk tombol di produk terkait
                 relatedContainer.querySelectorAll('.btn-related').forEach(btn => {
                     btn.addEventListener('click', function() {
-                        addToCart(this.dataset.id, this.dataset.name, parseInt(this.dataset.price), this.dataset.image);
+                        addToCart(this.dataset.id, this.dataset.name, parseInt(this.dataset.price), this.dataset.image, parseInt(this.dataset.weight));
                     });
                 });
             } catch (e) {
@@ -493,12 +495,12 @@
             }
         });
 
-        function addToCart(id, name, price, image) {
+        function addToCart(id, name, price, image, weight = 1000) {
             const existingItem = cart.find(item => item.id === id);
             if (existingItem) {
                 existingItem.qty++;
             } else {
-                cart.push({ id, name, price, image, qty: 1 });
+                cart.push({ id, name, price, image, weight, qty: 1 });
             }
             localStorage.setItem("cart", JSON.stringify(cart));
             document.getElementById('cart-count').innerText = cart.reduce((acc, item) => acc + item.qty, 0);
@@ -506,7 +508,7 @@
         }
 
         document.getElementById('btn-add-detail').addEventListener('click', () => {
-            if (currentProduct) addToCart(currentProduct.id, currentProduct.name, currentProduct.price, currentProduct.image);
+            if (currentProduct) addToCart(currentProduct.id, currentProduct.name, currentProduct.price, currentProduct.image, currentProduct.weight);
         });
 
         // Logic Tanya Stok via WA
