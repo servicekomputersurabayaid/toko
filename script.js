@@ -75,7 +75,8 @@ async function loadProducts() {
                     weight: parseInt(data.berat || data.weight || 1000), // Ambil berat (gram)
                     category: data.kategori || "Umum",
                     subCategory: data.sub_kategori || "", // Load Sub Kategori
-                    image: data.image_url || "https://via.placeholder.com/150"
+                    image: data.image_url || "https://via.placeholder.com/150",
+                    variants: data.variants || data.varian || [] // Load Varian
                 });
             }
         });
@@ -263,6 +264,9 @@ function renderProducts(data = products, resetPage = false) {
             `;
         }
 
+        // Cek varian untuk tombol
+        const hasVariants = product.variants && product.variants.length > 0;
+
         return `
         <div class="product-card">
             ${discountBadge}
@@ -273,7 +277,7 @@ function renderProducts(data = products, resetPage = false) {
             <div class="product-info">
                 <h3 class="product-title" onclick="window.location.href='detail.html?id=${product.id}'" style="cursor:pointer">${product.name}</h3>
                 ${priceDisplay}
-                <button class="btn-add" data-id="${product.id}">+ Keranjang</button>
+                <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
             </div>
         </div>`}).join('');
     html += '</div>';
@@ -344,6 +348,13 @@ if (sortSelect) {
 function addToCart(id) {
     if (!id) return;
     const product = products.find(p => p.id === id);
+
+    // Jika produk punya varian, alihkan ke detail page
+    if (product.variants && product.variants.length > 0) {
+        window.location.href = `detail.html?id=${id}`;
+        return;
+    }
+
     const existingItem = cart.find(item => item.id === id);
 
     if (existingItem) {
