@@ -186,14 +186,14 @@
   <span style="padding: 8px 12px; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 4px;">Nonaktif: <strong id="cnt-inactive">0</strong></span>
 </div>
 
-<div style="display: flex; gap: 10px; margin-bottom: 10px;">
-    <select id="filterStatus" onchange="searchTable()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; min-width: 120px;">
+<div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
+    <select id="filterStatus" onchange="searchTable()" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
         <option value="">Semua Status</option>
         <option value="active">Aktif</option>
         <option value="draft">Draft</option>
         <option value="inactive">Nonaktif</option>
     </select>
-    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Cari nama produk atau kategori..." class="search-admin" style="margin-bottom: 0; flex: 1;">
+    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Cari nama produk atau kategori..." class="search-admin" style="margin-bottom: 0; flex: 1; padding: 12px; font-size: 1rem; border-radius: 6px;">
 </div>
 
 <table id="productTable">
