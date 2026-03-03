@@ -35,6 +35,8 @@
         <p>Pilih banyak gambar sekaligus, lalu klik Upload. URL akan muncul di bawah.</p>
         
         <input type="file" id="fileInput" multiple accept="image/*">
+        <br>
+        <label style="font-size: 0.9rem; color: #555;"><input type="checkbox" id="compressToggle" checked> Kompres Gambar Otomatis (Hemat Kuota & Storage)</label>
         <br><br>
         <button onclick="uploadImages()" class="btn btn-upload">Mulai Upload</button>
         
@@ -134,8 +136,45 @@
             }
         }
 
+        // Helper: Kompresi Gambar menggunakan Canvas
+        function compressImage(file, quality = 0.7, maxWidth = 1000) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Resize jika lebar melebihi batas
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Convert ke Blob JPEG
+                        canvas.toBlob((blob) => {
+                            if (!blob) return reject(new Error('Gagal kompresi gambar'));
+                            resolve(blob);
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = (err) => reject(err);
+                };
+                reader.onerror = (err) => reject(err);
+            });
+        }
+
         window.uploadImages = async function() {
             const fileInput = document.getElementById('fileInput');
+            const compressToggle = document.getElementById('compressToggle');
             const files = fileInput.files;
             const statusDiv = document.getElementById('status');
             const output = document.getElementById('urlOutput');
@@ -155,20 +194,30 @@
             let urls = [];
 
             for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                // Buat nama file unik agar tidak tertimpa
-                const fileName = `products/${Date.now()}_${file.name}`;
-                const storageRef = ref(storage, fileName);
+                let file = files[i];
+                let fileName = `products/${Date.now()}_${file.name}`;
                 
                 try {
-                    statusDiv.innerHTML += `<div class="status-item">Mengupload <b>${file.name}</b>...</div>`;
+                    // Logika Kompresi
+                    if (compressToggle && compressToggle.checked && file.type.startsWith('image/')) {
+                        statusDiv.innerHTML += `<div class="status-item">⏳ Mengompres <b>${file.name}</b>...</div>`;
+                        const compressedBlob = await compressImage(file, 0.7, 1000); // Quality 0.7, Max Width 1000px
+                        file = compressedBlob;
+                        // Ubah ekstensi jadi .jpg karena hasil kompresi canvas adalah jpeg
+                        const originalName = files[i].name.substring(0, files[i].name.lastIndexOf('.')) || files[i].name;
+                        fileName = `products/${Date.now()}_${originalName}.jpg`;
+                    }
+
+                    const storageRef = ref(storage, fileName);
+                    statusDiv.innerHTML += `<div class="status-item">⬆️ Mengupload <b>${fileName}</b>...</div>`;
+                    
                     const snapshot = await uploadBytes(storageRef, file);
                     const url = await getDownloadURL(snapshot.ref);
                     urls.push(url);
-                    statusDiv.innerHTML += `<div class="status-item success">✅ ${file.name} berhasil.</div>`;
+                    statusDiv.innerHTML += `<div class="status-item success">✅ Berhasil.</div>`;
                 } catch (error) {
                     console.error(error);
-                    statusDiv.innerHTML += `<div class="status-item error">❌ ${file.name} gagal: ${error.message}</div>`;
+                    statusDiv.innerHTML += `<div class="status-item error">❌ Gagal: ${error.message}</div>`;
                 }
             }
 
