@@ -71,9 +71,20 @@
             </div>
         </div>
 
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <label>Harga Modal (Rp)</label>
+                <input type="number" id="harga_modal" placeholder="0" oninput="calculatePrice()">
+            </div>
+            <div>
+                <label>Margin (%)</label>
+                <input type="number" id="margin" placeholder="0" oninput="calculatePrice()">
+            </div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
             <div>
-                <label>Harga (Rp) *</label>
+                <label>Harga (Rp) * <a href="#" onclick="toggleManualPrice(event)" style="font-size: 0.8rem; float: right; text-decoration: none; color: #3498db;">Hitung otomatis</a></label>
                 <input type="number" id="harga" required placeholder="0">
             </div>
             <div>
