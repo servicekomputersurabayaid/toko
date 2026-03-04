@@ -1355,6 +1355,13 @@ btnLogoutNav.addEventListener('click', () => signOut(auth));
 onAuthStateChanged(auth, (user) => {
     currentUser = user;
     if (user) {
+        // Auto Refresh Sekali saat Login agar UI/Produk sinkron
+        if (!sessionStorage.getItem('has_refreshed_login')) {
+            sessionStorage.setItem('has_refreshed_login', 'true');
+            window.location.reload();
+            return;
+        }
+
         btnLoginNav.style.display = 'none';
         btnLogoutNav.style.display = 'block';
         document.getElementById('btn-history-nav').style.display = 'block';
@@ -1362,6 +1369,9 @@ onAuthStateChanged(auth, (user) => {
         userNameDisplay.innerText = user.email.split('@')[0]; // Tampilkan nama dari email
         checkAdminStatus(user);
     } else {
+        // Reset flag saat logout agar nanti login bisa refresh lagi
+        sessionStorage.removeItem('has_refreshed_login');
+
         btnLoginNav.style.display = 'block';
         btnLogoutNav.style.display = 'none';
         document.getElementById('btn-history-nav').style.display = 'none';

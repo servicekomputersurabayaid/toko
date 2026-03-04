@@ -331,7 +331,8 @@
             const imgList = rawImg.split("|").map(s => s.trim()).filter(s => s);
 
             const data = {
-                judul: document.getElementById('judul').value,
+                judul: document.getElementById('judul').value.trim(),
+                judul_lowercase: document.getElementById('judul').value.trim().toLowerCase(),
                 kategori: document.getElementById('kategori').value,
                 sub_kategori: document.getElementById('sub_kategori').value,
                 harga_modal: parseInt(document.getElementById('harga_modal').value) || 0,
