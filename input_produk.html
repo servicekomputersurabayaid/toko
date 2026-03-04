@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Input Produk Manual - Service Komputer Surabaya ID</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #2c3e50; }
+        label { display: block; margin-top: 10px; font-weight: bold; color: #333; font-size: 0.9rem; }
+        input, textarea, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; color: white; margin-top: 20px; }
+        .btn-save { background-color: #27ae60; width: 100%; }
+        .btn-save:hover { background-color: #219150; }
+        .btn-back { background-color: #7f8c8d; text-decoration: none; display: inline-block; text-align: center; color: white; padding: 8px 15px; border-radius: 4px; font-size: 14px; }
+        .btn-back:hover { background-color: #95a5a6; }
+        
+        /* Variant Styles */
+        .variant-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .variant-row input { margin-top: 0; }
+        .btn-remove-var { background: #e74c3c; color: white; border: none; padding: 0 12px; height: 38px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
+        /* Modal Login Check */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 15% auto; padding: 30px; border-radius: 8px; width: 350px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin:0;">Input Produk Baru</h2>
+        <a href="admin.html" class="btn-back">Kembali ke Admin</a>
+    </div>
+    
+    <form id="productForm" onsubmit="event.preventDefault(); saveProduct();">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <label>Judul Produk *</label>
+                <input type="text" id="judul" required placeholder="Nama Produk">
+            </div>
+            <div>
+                <label>Kategori *</label>
+                <input type="text" id="kategori" required placeholder="Contoh: Laptop">
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <label>Sub Kategori</label>
+                <input type="text" id="sub_kategori" placeholder="Contoh: Gaming">
+            </div>
+            <div>
+                <label>Status</label>
+                <select id="status">
+                    <option value="active">Aktif</option>
+                    <option value="draft">Draft</option>
+                    <option value="inactive">Nonaktif</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+            <div>
+                <label>Harga (Rp) *</label>
+                <input type="number" id="harga" required placeholder="0">
+            </div>
+            <div>
+                <label>Harga Coret (Rp)</label>
+                <input type="number" id="harga_diskon" placeholder="Opsional (Diskon)">
+            </div>
+            <div>
+                <label>Berat (Gram)</label>
+                <input type="number" id="berat" value="1000">
+            </div>
+        </div>
+
+        <label>URL Gambar (Pisahkan dengan " | " jika banyak)</label>
+        <input type="text" id="image_url" placeholder="https://... | https://...">
+        <small style="color: #666; display:block; margin-top:5px;">Tips: Gunakan halaman <a href="upload_images.html" target="_blank" style="color:#3498db;">Upload Gambar Masal</a> untuk mendapatkan URL gambar.</small>
+
+        <label>Deskripsi Singkat</label>
+        <textarea id="deskripsi_singkat" rows="2" placeholder="Ringkasan produk..."></textarea>
+
+        <label>Deskripsi Panjang</label>
+        <textarea id="deskripsi_panjang" rows="6" placeholder="Detail spesifikasi produk..."></textarea>
+
+        <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
+        
+        <label style="margin-bottom:10px;">Varian Produk (Opsional)</label>
+        <div id="variantContainer"></div>
+        <button type="button" onclick="addVariantRow()" style="background:#3498db; color:white; border:none; padding:8px 12px; margin-top:5px; border-radius:4px; cursor:pointer; font-size:0.9rem;">+ Tambah Varian</button>
+
+        <br><br>
+        <button type="submit" class="btn btn-save" id="btnSave">Simpan Produk</button>
+    </form>
+</div>
+
+<!-- Login Check Modal -->
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <h3>Akses Ditolak</h3>
+        <p>Silakan login terlebih dahulu di halaman Admin utama.</p>
+        <a href="admin.html" class="btn btn-save" style="display:block; text-decoration:none;">Ke Halaman Admin</a>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
+        authDomain: "servicekomputersurabaya.firebaseapp.com",
+        projectId: "servicekomputersurabaya",
+        storageBucket: "servicekomputersurabaya.firebasestorage.app",
+        messagingSenderId: "985678673202",
+        appId: "1:985678673202:web:4ab14bfb82fc3dee4ad32b",
+        measurementId: "G-12RJTSNG7S"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+        if (!user) {
+            document.getElementById('loginModal').style.display = 'block';
+        }
+    });
+
+    window.addVariantRow = function() {
+        const container = document.getElementById("variantContainer");
+        const div = document.createElement('div');
+        div.className = 'variant-row';
+        div.innerHTML = `
+            <input type="text" placeholder="Nama Varian (ex: Merah)" class="var-name" style="flex:2;">
+            <input type="number" placeholder="Harga" class="var-price" style="flex:1;">
+            <input type="number" placeholder="Berat(g)" class="var-weight" style="flex:1;">
+            <button type="button" class="btn-remove-var" onclick="this.parentElement.remove()">X</button>
+        `;
+        container.appendChild(div);
+    }
+
+    window.saveProduct = async function() {
+        const btn = document.getElementById('btnSave');
+        btn.disabled = true;
+        btn.innerText = "Menyimpan...";
+
+        try {
+            const variantRows = document.querySelectorAll('.variant-row');
+            let variants = [];
+            variantRows.forEach(row => {
+                const name = row.querySelector('.var-name').value;
+                const price = parseInt(row.querySelector('.var-price').value) || 0;
+                const weight = parseInt(row.querySelector('.var-weight').value) || 0;
+                if(name) variants.push({ name, price, weight });
+            });
+
+            const rawImg = document.getElementById('image_url').value;
+            const imgList = rawImg.split("|").map(s => s.trim()).filter(s => s);
+
+            const data = {
+                judul: document.getElementById('judul').value,
+                kategori: document.getElementById('kategori').value,
+                sub_kategori: document.getElementById('sub_kategori').value,
+                harga: parseInt(document.getElementById('harga').value) || 0,
+                harga_diskon: parseInt(document.getElementById('harga_diskon').value) || 0,
+                berat: parseInt(document.getElementById('berat').value) || 1000,
+                image_url: imgList[0] || "",
+                images: imgList,
+                deskripsi_singkat: document.getElementById('deskripsi_singkat').value,
+                deskripsi_panjang: document.getElementById('deskripsi_panjang').value,
+                status: document.getElementById('status').value,
+                active: document.getElementById('status').value === 'active',
+                variants: variants,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+
+            await addDoc(collection(db, "products"), data);
+            
+            alert("Produk berhasil disimpan!");
+            document.getElementById('productForm').reset();
+            document.getElementById('variantContainer').innerHTML = "";
+            window.scrollTo(0,0);
+            
+        } catch (error) {
+            console.error(error);
+            alert("Gagal menyimpan: " + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Simpan Produk";
+        }
+    }
+</script>
+
+</body>
+</html>
