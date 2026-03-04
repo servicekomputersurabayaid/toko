@@ -1024,30 +1024,8 @@ window.deleteProduct = async function(id) {
 }
 
 window.editProduct = function(id) {
-  const p = window.productsData[id];
-  if(!p) return;
-
-  document.getElementById("editId").value = id;
-  document.getElementById("editJudul").value = p.judul || p.name || "";
-  document.getElementById("editHarga").value = p.harga || 0;
-  document.getElementById("editHargaDiskon").value = p.harga_diskon || 0;
-  document.getElementById("editKategori").value = p.kategori || "Umum";
-  document.getElementById("editSubKategori").value = p.sub_kategori || "";
-  document.getElementById("editBerat").value = p.berat || 1000;
-  document.getElementById("editImage").value = (p.images && p.images.length > 0) ? p.images.join(" | ") : (p.image_url || "");
-  document.getElementById("editStatus").value = p.status || (p.active === false ? "inactive" : "active");
-  document.getElementById("editDescShort").value = p.deskripsi_singkat || "";
-  document.getElementById("editDescLong").value = p.deskripsi_panjang || "";
-
-  // Populate Variants
-  const container = document.getElementById("variantContainer");
-  container.innerHTML = ""; // Clear previous
-  if (p.variants && Array.isArray(p.variants)) {
-      p.variants.forEach(v => addVariantRow(v.name, v.price, v.weight));
-  }
-  
-  document.getElementById("editForm").style.display = "block";
-  document.getElementById("overlay").style.display = "block";
+  // Membuka halaman input_produk.html dengan parameter ID
+  window.open(`input_produk.html?id=${id}`, '_blank');
 }
 
 window.addVariantRow = function(name='', price='', weight='') {
