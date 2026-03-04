@@ -520,6 +520,7 @@ window.uploadCSV = async function(){
       deskripsi_panjang: cleanHTML(data.deskripsi_panjang || ""),
       harga: parseInt(data.harga) || 0,
       harga_diskon: parseInt(data.harga_diskon) || 0,
+      harga_modal: parseInt(data.harga_modal) || 0,
       kategori: data.kategori || "Umum",
       sub_kategori: data.sub_kategori || "", // Tambahkan Sub Kategori
       berat: parseInt(data.berat) || 1000, // Default 1000 gram jika kosong
@@ -571,7 +572,7 @@ window.exportCSV = async function() {
     const querySnapshot = await getDocs(collection(db, "products"));
     
     // Header CSV yang sesuai dengan format upload (agar bisa di-import lagi)
-    const headers = ["id", "judul", "kategori", "sub_kategori", "harga", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status", "variants"];
+    const headers = ["id", "judul", "kategori", "sub_kategori", "harga", "harga_modal", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status", "variants"];
     let csvContent = headers.join(",") + "\n";
     let count = 0;
 
