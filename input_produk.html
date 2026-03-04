@@ -24,6 +24,16 @@
         /* Modal Login Check */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: white; margin: 15% auto; padding: 30px; border-radius: 8px; width: 350px; text-align: center; }
+
+        /* Image Preview Styles */
+        .preview-container { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; min-height: 20px; }
+        .preview-item { position: relative; width: 100px; height: 100px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; cursor: grab; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .preview-item:active { cursor: grabbing; }
+        .preview-item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        .preview-item .btn-delete-img { position: absolute; top: 2px; right: 2px; background: rgba(231, 76, 60, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 14px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .preview-item .btn-delete-img:hover { background: #c0392b; }
+        .preview-item.dragging { opacity: 0.4; border: 2px dashed #3498db; transform: scale(0.9); }
+        .preview-item.over { border: 2px dashed #27ae60; }
     </style>
 </head>
 <body>
@@ -79,6 +89,7 @@
         <label>URL Gambar (Pisahkan dengan " | " jika banyak)</label>
         <input type="text" id="image_url" placeholder="https://... | https://...">
         <small style="color: #666; display:block; margin-top:5px;">Tips: Gunakan halaman <a href="upload_images.html" target="_blank" style="color:#3498db;">Upload Gambar Masal</a> untuk mendapatkan URL gambar.</small>
+        <div id="imagePreviewContainer" class="preview-container"></div>
 
         <label>Deskripsi Singkat</label>
         <textarea id="deskripsi_singkat" rows="2" placeholder="Ringkasan produk..."></textarea>
@@ -144,6 +155,67 @@
         container.appendChild(div);
     }
 
+    // --- Image Preview & Drag Drop Logic ---
+    window.renderPreviews = function(value) {
+        const container = document.getElementById('imagePreviewContainer');
+        container.innerHTML = '';
+        const urls = value.split('|').map(u => u.trim()).filter(u => u);
+        
+        urls.forEach((url, index) => {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.draggable = true;
+            div.dataset.index = index;
+            
+            div.innerHTML = `
+                <img src="${url}" onerror="this.src='https://via.placeholder.com/100?text=Error'">
+                <button type="button" class="btn-delete-img" onclick="removeImage(${index})" title="Hapus Gambar">×</button>
+            `;
+            
+            // Drag Events
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragover', handleDragOver);
+            div.addEventListener('dragleave', handleDragLeave);
+            div.addEventListener('drop', handleDrop);
+            div.addEventListener('dragend', handleDragEnd);
+            
+            container.appendChild(div);
+        });
+    }
+
+    window.removeImage = function(index) {
+        const input = document.getElementById('image_url');
+        let urls = input.value.split('|').map(u => u.trim()).filter(u => u);
+        urls.splice(index, 1);
+        input.value = urls.join(' | ');
+        renderPreviews(input.value);
+    }
+
+    let dragSrcEl = null;
+    function handleDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = 'move'; this.classList.add('dragging'); }
+    function handleDragOver(e) { if (e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; this.classList.add('over'); return false; }
+    function handleDragLeave(e) { this.classList.remove('over'); }
+    function handleDrop(e) {
+        if (e.stopPropagation) e.stopPropagation();
+        this.classList.remove('over');
+        if (dragSrcEl !== this) {
+            const input = document.getElementById('image_url');
+            let urls = input.value.split('|').map(u => u.trim()).filter(u => u);
+            const oldIndex = parseInt(dragSrcEl.dataset.index);
+            const newIndex = parseInt(this.dataset.index);
+            const item = urls.splice(oldIndex, 1)[0];
+            urls.splice(newIndex, 0, item);
+            input.value = urls.join(' | ');
+            renderPreviews(input.value);
+        }
+        return false;
+    }
+    function handleDragEnd(e) { this.classList.remove('dragging'); this.classList.remove('over'); }
+
+    document.getElementById('image_url').addEventListener('input', function() {
+        renderPreviews(this.value);
+    });
+
     window.saveProduct = async function() {
         const btn = document.getElementById('btnSave');
         btn.disabled = true;
@@ -185,6 +257,7 @@
             alert("Produk berhasil disimpan!");
             document.getElementById('productForm').reset();
             document.getElementById('variantContainer').innerHTML = "";
+            document.getElementById('imagePreviewContainer').innerHTML = "";
             window.scrollTo(0,0);
             
         } catch (error) {
