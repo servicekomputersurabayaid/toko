@@ -91,10 +91,16 @@
     .btn { padding: 8px 12px; cursor: pointer; margin-right: 5px; border-radius: 4px; font-size: 0.85rem; transition: 0.2s; }
     .btn-edit { background-color: #f39c12; color: white; border: none; }
     .btn-edit:hover { background-color: #e67e22; }
+    .btn-duplicate { background-color: #16a085; color: white; border: none; }
+    .btn-duplicate:hover { background-color: #1abc9c; }
     .btn-delete { background-color: #e74c3c; color: white; border: none; }
     .btn-delete:hover { background-color: #c0392b; }
     .btn-view { background-color: #3498db; color: white; border: none; }
     .btn-view:hover { background-color: #2980b9; }
+    .btn-featured-set { background-color: #2ecc71; color: white; border: none; font-size: 0.8rem; padding: 4px 8px; }
+    .btn-featured-set:hover { background-color: #27ae60; }
+    .btn-featured-remove { background-color: #e67e22; color: white; border: none; font-size: 0.8rem; padding: 4px 8px; margin-top: 4px; }
+    .btn-featured-remove:hover { background-color: #d35400; }
     
     /* Forms & Inputs in Admin */
     input[type="text"], input[type="number"], input[type="email"], textarea, select {
@@ -206,6 +212,7 @@
       <th>Kategori</th>
       <th>Harga</th>
       <th>Status</th>
+      <th>Featured</th>
       <th>Aksi</th>
     </tr>
   </thead>
@@ -914,7 +921,7 @@ async function loadProducts() {
   tbody.innerHTML = "<tr><td colspan='5'>Memuat...</td></tr>";
   
   try {
-    const querySnapshot = await getDocs(collection(db, "products"));
+    const querySnapshot = await getDocs(query(collection(db, "products"), orderBy("createdAt", "desc")));
     tbody.innerHTML = "";
     window.productsData = {}; // Reset data
     
@@ -945,6 +952,12 @@ async function loadProducts() {
       let badgeColor = status === 'active' ? '#d4edda' : (status === 'draft' ? '#fff3cd' : '#f8d7da');
       let textColor = status === 'active' ? '#155724' : (status === 'draft' ? '#856404' : '#721c24');
 
+      const featuredDisplay = p.isFeatured
+        ? `<span style="font-weight:bold; color:#27ae60;">Aktif (Urutan: ${p.featuredOrder || '99'})</span><br>
+           <button class="btn btn-featured-set" onclick="setFeatured('${doc.id}')">Ubah Urutan</button>
+           <button class="btn btn-featured-remove" onclick="removeFeatured('${doc.id}')">Hapus</button>`
+        : `<button class="btn btn-featured-set" onclick="setFeatured('${doc.id}')">Jadikan Featured</button>`;
+
       const subCatDisplay = p.sub_kategori ? `<br><small style="color:#666; font-style:italic;">${p.sub_kategori}</small>` : '';
 
       const row = `
@@ -954,8 +967,12 @@ async function loadProducts() {
           <td>Rp ${p.harga}</td>
           <td><span style="padding: 4px 8px; border-radius: 4px; background: ${badgeColor}; color: ${textColor}; font-size: 0.85rem; text-transform: capitalize;">${status}</span></td>
           <td>
+            ${featuredDisplay}
+          </td>
+          <td>
             <button class="btn btn-view" onclick="window.open('detail.html?id=${doc.id}', '_blank')">Lihat</button>
             <button class="btn btn-edit" onclick="editProduct('${doc.id}')">Edit</button>
+            <button class="btn btn-duplicate" onclick="duplicateProduct('${doc.id}')">Duplikat</button>
             <button class="btn btn-delete" onclick="deleteProduct('${doc.id}')">Hapus</button>
           </td>
         </tr>
@@ -971,7 +988,7 @@ async function loadProducts() {
 
   } catch (e) {
     console.error(e);
-    tbody.innerHTML = "<tr><td colspan='5'>Gagal memuat data: " + e.message + "</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='6'>Gagal memuat data: " + e.message + "</td></tr>";
   }
 }
 
@@ -1026,6 +1043,42 @@ window.deleteProduct = async function(id) {
 window.editProduct = function(id) {
   // Membuka halaman input_produk.html dengan parameter ID
   window.open(`input_produk.html?id=${id}`, '_blank');
+}
+
+window.duplicateProduct = function(id) {
+  window.open(`input_produk.html?id=${id}&duplicate=true`, '_blank');
+}
+
+window.setFeatured = async function(id) {
+    const currentProduct = window.productsData[id];
+    const currentOrder = currentProduct.featuredOrder || 99;
+
+    const orderInput = prompt("Set urutan featured (angka lebih kecil akan tampil lebih dulu):", currentOrder);
+    if (orderInput === null) return; // User cancelled
+
+    const order = parseInt(orderInput);
+    if (isNaN(order)) {
+        await showCustomAlert("Harap masukkan angka yang valid.");
+        return;
+    }
+
+    await updateDoc(doc(db, "products", id), {
+        isFeatured: true,
+        featuredOrder: order
+    });
+    await showCustomAlert("Produk berhasil dijadikan featured!");
+    loadProducts(); // Refresh list
+}
+
+window.removeFeatured = async function(id) {
+    const confirmed = await showCustomConfirm("Anda yakin ingin menghapus produk ini dari daftar featured?");
+    if (!confirmed) return;
+
+    await updateDoc(doc(db, "products", id), {
+        isFeatured: false
+    });
+    await showCustomAlert("Produk berhasil dihapus dari featured.");
+    loadProducts(); // Refresh list
 }
 
 window.addVariantRow = function(name='', price='', weight='') {

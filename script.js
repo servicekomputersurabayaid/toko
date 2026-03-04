@@ -76,7 +76,9 @@ async function loadProducts() {
                     category: data.kategori || "Umum",
                     subCategory: data.sub_kategori || "", // Load Sub Kategori
                     image: data.image_url || "https://via.placeholder.com/150",
-                    variants: data.variants || data.varian || [] // Load Varian
+                    variants: data.variants || data.varian || [], // Load Varian
+                    isFeatured: data.isFeatured || false, // Tambahkan ini
+                    featuredOrder: data.featuredOrder || 99 // Tambahkan ini
                 });
             }
         });
@@ -84,6 +86,9 @@ async function loadProducts() {
         // Render Sidebar Kategori
         const categories = [...new Set(products.map(p => p.category))].sort();
         renderCategories(categories);
+        
+        // Render Featured Products
+        renderFeaturedProducts();
         
         // Cek apakah ada pencarian dari URL (misal redirect dari detail.html)
         const params = new URLSearchParams(window.location.search);
@@ -104,6 +109,73 @@ async function loadProducts() {
         console.error("Error loading products:", error);
         productList.innerHTML = "<p>Gagal memuat produk dari database.</p>";
     }
+}
+
+function renderFeaturedProducts() {
+    const featuredList = document.getElementById('featured-product-list');
+    const featuredSection = document.getElementById('featured-section');
+    if (!featuredList || !featuredSection) return;
+
+    const featuredProducts = products
+        .filter(p => p.isFeatured)
+        .sort((a, b) => (a.featuredOrder || 99) - (b.featuredOrder || 99));
+
+    if (featuredProducts.length === 0) {
+        featuredSection.style.display = 'none';
+        return;
+    }
+
+    let html = "";
+    featuredProducts.forEach(product => {
+        const isWishlist = wishlist.some(item => item.id === product.id);
+        const heartClass = isWishlist ? 'active' : '';
+        
+        let discountBadge = '';
+        let priceDisplay = `<p class="product-price">Rp ${product.price.toLocaleString('id-ID')}</p>`;
+        
+        if (product.originalPrice > product.price) {
+            const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+            discountBadge = `<span class="badge-discount">-${discount}%</span>`;
+            priceDisplay = `
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin-bottom:10px;">
+                    <span class="price-strikethrough">Rp ${product.originalPrice.toLocaleString('id-ID')}</span>
+                    <span class="product-price" style="margin-bottom:0;">Rp ${product.price.toLocaleString('id-ID')}</span>
+                </div>
+            `;
+        }
+
+        const hasVariants = product.variants && product.variants.length > 0;
+
+        html += `
+        <div class="product-card">
+            ${discountBadge}
+            <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
+            <div onclick="window.location.href='detail.html?id=${product.id}'" style="cursor:pointer">
+                <img src="${product.image}" alt="${product.name}" class="product-img">
+            </div>
+            <div class="product-info">
+                <h3 class="product-title" onclick="window.location.href='detail.html?id=${product.id}'" style="cursor:pointer">${product.name}</h3>
+                ${priceDisplay}
+                <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
+            </div>
+        </div>`;
+    });
+
+    featuredList.innerHTML = html;
+    featuredSection.style.display = 'block';
+
+    // Event listeners untuk produk unggulan
+    featuredList.querySelectorAll('.btn-add').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            addToCart(e.target.dataset.id);
+        });
+    });
+
+    featuredList.querySelectorAll('.btn-wishlist').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            toggleWishlist(e.currentTarget.dataset.id);
+        });
+    });
 }
 
 async function loadStoreConfig() {

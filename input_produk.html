@@ -216,13 +216,46 @@
         renderPreviews(this.value);
     });
 
+    // --- Price Calculation Logic ---
+    window.calculatePrice = function() {
+        const hargaJualInput = document.getElementById('harga');
+        if (hargaJualInput.readOnly) {
+            const hargaModal = parseFloat(document.getElementById('harga_modal').value) || 0;
+            const margin = parseFloat(document.getElementById('margin').value) || 0;
+            
+            if (hargaModal > 0) {
+                const hargaJual = hargaModal + (hargaModal * (margin / 100));
+                hargaJualInput.value = Math.round(hargaJual);
+            } else {
+                hargaJualInput.value = 0;
+            }
+        }
+    }
+
+    window.toggleManualPrice = function(event) {
+        event.preventDefault();
+        const hargaJualInput = document.getElementById('harga');
+        const link = event.target;
+
+        hargaJualInput.readOnly = !hargaJualInput.readOnly;
+        link.innerText = hargaJualInput.readOnly ? "Input manual" : "Hitung otomatis";
+        if (hargaJualInput.readOnly) calculatePrice(); // Recalculate when switching back to auto
+        else hargaJualInput.focus();
+    }
+
     // --- Logic Edit Mode ---
     const urlParams = new URLSearchParams(window.location.search);
     const editId = urlParams.get('id');
+    const isDuplicate = urlParams.get('duplicate') === 'true';
 
     if (editId) {
-        document.querySelector('h2').innerText = "Edit Produk";
-        document.getElementById('btnSave').innerText = "Update Produk";
+        if (isDuplicate) {
+            document.querySelector('h2').innerText = "Duplikat Produk";
+            document.getElementById('btnSave').innerText = "Simpan Sebagai Produk Baru";
+        } else {
+            document.querySelector('h2').innerText = "Edit Produk";
+            document.getElementById('btnSave').innerText = "Update Produk";
+        }
         loadProductData(editId);
     }
 
@@ -232,12 +265,21 @@
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                document.getElementById('judul').value = data.judul || data.name || "";
+                document.getElementById('judul').value = (data.judul || data.name || "") + (isDuplicate ? " (Copy)" : "");
                 document.getElementById('kategori').value = data.kategori || "";
                 document.getElementById('sub_kategori').value = data.sub_kategori || "";
                 document.getElementById('status').value = data.status || (data.active === false ? 'inactive' : 'active');
                 document.getElementById('harga').value = data.harga || 0;
                 document.getElementById('harga_diskon').value = data.harga_diskon || 0;
+
+                // Load harga modal dan hitung ulang margin jika ada
+                const hargaModal = data.harga_modal || 0;
+                document.getElementById('harga_modal').value = hargaModal;
+                if (hargaModal > 0 && data.harga > hargaModal) {
+                    const margin = ((data.harga - hargaModal) / hargaModal) * 100;
+                    document.getElementById('margin').value = Math.round(margin);
+                }
+
                 document.getElementById('berat').value = data.berat || 1000;
                 
                 const imgStr = (data.images && data.images.length > 0) ? data.images.join(" | ") : (data.image_url || "");
@@ -281,6 +323,7 @@
                 judul: document.getElementById('judul').value,
                 kategori: document.getElementById('kategori').value,
                 sub_kategori: document.getElementById('sub_kategori').value,
+                harga_modal: parseInt(document.getElementById('harga_modal').value) || 0,
                 harga: parseInt(document.getElementById('harga').value) || 0,
                 harga_diskon: parseInt(document.getElementById('harga_diskon').value) || 0,
                 berat: parseInt(document.getElementById('berat').value) || 1000,
@@ -295,7 +338,7 @@
                 updatedAt: new Date()
             };
 
-            if (editId) {
+            if (editId && !isDuplicate) {
                 // Mode Update
                 delete data.createdAt; // Jangan timpa tanggal pembuatan
                 await updateDoc(doc(db, "products", editId), data);
