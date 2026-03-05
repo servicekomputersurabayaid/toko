@@ -1205,7 +1205,7 @@ document.getElementById('btn-mobile-history')?.addEventListener('click', () => {
 });
 document.getElementById('btn-mobile-admin')?.addEventListener('click', () => {
     document.getElementById('mobile-menu-modal').style.display = 'none';
-    window.location.href = 'admin.html';
+    window.location.href = 'admin';
 });
 document.getElementById('btn-mobile-track')?.addEventListener('click', () => {
     document.getElementById('mobile-menu-modal').style.display = 'none';
@@ -1345,7 +1345,7 @@ document.getElementById('close-history').addEventListener('click', () => {
 
 // Handle Admin Button Click (Desktop)
 document.getElementById('btn-admin-nav').addEventListener('click', () => {
-    window.location.href = 'admin.html';
+    window.location.href = 'admin';
 });
 
 // Handle Logout
