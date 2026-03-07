@@ -125,9 +125,8 @@
     .toast { background-color: #333; color: #fff; padding: 12px 20px; border-radius: 4px; margin-top: 10px; opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translateY(20px); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
     .toast.show { opacity: 1; transform: translateY(0); }
 
-    /* Highlight Animation */
-    @keyframes highlightRow { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
-    .highlight-success { animation: highlightRow 2s ease-out; }
+    /* Highlight Persistent */
+    .highlight-success { background-color: #d4edda !important; }
   </style>
 </head>
 <body>
@@ -1036,8 +1035,6 @@ window.updateInline = async function(id, field, value, element) {
             // Highlight Row
             const row = element.closest('tr');
             if(row) {
-                row.classList.remove('highlight-success');
-                void row.offsetWidth; // trigger reflow
                 row.classList.add('highlight-success');
             }
         }
