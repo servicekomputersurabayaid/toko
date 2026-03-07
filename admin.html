@@ -231,6 +231,7 @@
       <th>Judul</th>
       <th>Kategori</th>
       <th>Harga</th>
+      <th>Harga Coret</th>
       <th>Status</th>
       <th>Featured</th>
       <th>Aksi</th>
@@ -1008,6 +1009,8 @@ window.updateInline = async function(id, field, value, element) {
     const updateData = {};
     if (field === 'harga') {
         updateData.harga = parseInt(value) || 0;
+    } else if (field === 'harga_diskon') {
+        updateData.harga_diskon = parseInt(value) || 0;
     } else if (field === 'status') {
         updateData.status = value;
         updateData.active = (value === 'active');
@@ -1152,6 +1155,9 @@ async function loadProducts(mode = 'refresh') {
           </td>
           <td>
             <input type="number" value="${p.harga}" onchange="updateInline('${doc.id}', 'harga', this.value, this)" style="padding:5px; border:1px solid #ddd; border-radius:4px; width:100px;">
+          </td>
+          <td>
+            <input type="number" value="${p.harga_diskon || 0}" onchange="updateInline('${doc.id}', 'harga_diskon', this.value, this)" style="padding:5px; border:1px solid #ddd; border-radius:4px; width:100px; color:#888;" placeholder="0">
           </td>
           <td>${statusSelect}</td>
           <td>
