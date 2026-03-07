@@ -215,6 +215,7 @@
     <input type="text" id="searchInput" onkeyup="handleSearchInput(event)" placeholder="Cari nama produk (tekan Enter)..." class="search-admin" style="margin-bottom: 0; flex: 1; padding: 12px; font-size: 1rem; border-radius: 6px;">
 </div>
 
+<datalist id="categoryListAdmin"></datalist>
 <table id="productTable">
   <thead>
     <tr>
@@ -977,6 +978,33 @@ window.changePage = function(delta) {
     }
 }
 
+window.updateInline = async function(id, field, value) {
+    const updateData = {};
+    if (field === 'harga') {
+        updateData.harga = parseInt(value) || 0;
+    } else if (field === 'status') {
+        updateData.status = value;
+        updateData.active = (value === 'active');
+        // Update visual background immediately
+        const el = document.getElementById(`status-${id}`);
+        if(el) {
+            if(value === 'active') { el.style.background = '#d4edda'; el.style.color = '#155724'; }
+            else if(value === 'draft') { el.style.background = '#fff3cd'; el.style.color = '#856404'; }
+            else { el.style.background = '#f8d7da'; el.style.color = '#721c24'; }
+        }
+        loadProductStats();
+    } else if (field === 'kategori') {
+        updateData.kategori = value;
+    }
+
+    try {
+        await updateDoc(doc(db, "products", id), updateData);
+    } catch (e) {
+        console.error("Gagal update inline:", e);
+        alert("Gagal update: " + e.message);
+    }
+}
+
 async function loadProducts(mode = 'refresh') {
   const tbody = document.querySelector("#productTable tbody");
   tbody.innerHTML = "<tr><td colspan='7'>Memuat...</td></tr>";
@@ -1035,6 +1063,15 @@ async function loadProducts(mode = 'refresh') {
         pageSnapshots[currentPage - 1] = querySnapshot.docs[querySnapshot.docs.length - 1];
     }
 
+    // Collect categories for datalist
+    const categories = new Set();
+    querySnapshot.forEach(doc => {
+        const d = doc.data();
+        if(d.kategori) categories.add(d.kategori);
+    });
+    const datalist = document.getElementById('categoryListAdmin');
+    if(datalist) datalist.innerHTML = Array.from(categories).map(c => `<option value="${c}">`).join('');
+
     querySnapshot.forEach((doc) => {
       const p = doc.data();
       window.productsData[doc.id] = p; // Simpan untuk keperluan edit
@@ -1049,6 +1086,13 @@ async function loadProducts(mode = 'refresh') {
       let badgeColor = status === 'active' ? '#d4edda' : (status === 'draft' ? '#fff3cd' : '#f8d7da');
       let textColor = status === 'active' ? '#155724' : (status === 'draft' ? '#856404' : '#721c24');
 
+      const statusSelect = `
+      <select id="status-${doc.id}" onchange="updateInline('${doc.id}', 'status', this.value)" style="padding: 4px 8px; border-radius: 4px; border:1px solid #ddd; background: ${badgeColor}; color: ${textColor}; font-size: 0.85rem; cursor:pointer; width: 100%;">
+        <option value="active" ${status === 'active' ? 'selected' : ''}>Aktif</option>
+        <option value="draft" ${status === 'draft' ? 'selected' : ''}>Draft</option>
+        <option value="inactive" ${status === 'inactive' ? 'selected' : ''}>Nonaktif</option>
+      </select>`;
+
       const featuredDisplay = p.isFeatured
         ? `<span style="font-weight:bold; color:#27ae60;">Aktif (Urutan: ${p.featuredOrder || '99'})</span><br>
            <button class="btn btn-featured-set" onclick="setFeatured('${doc.id}')">Ubah Urutan</button>
@@ -1061,9 +1105,14 @@ async function loadProducts(mode = 'refresh') {
         <tr>
           <td style="text-align: center;"><input type="checkbox" class="product-checkbox" value="${doc.id}" onchange="updateBulkDeleteButton()"></td>
           <td>${p.judul || p.name || '-'}</td>
-          <td>${p.kategori || 'Umum'} ${subCatDisplay}</td>
-          <td>Rp ${p.harga}</td>
-          <td><span style="padding: 4px 8px; border-radius: 4px; background: ${badgeColor}; color: ${textColor}; font-size: 0.85rem; text-transform: capitalize;">${status}</span></td>
+          <td>
+            <input type="text" list="categoryListAdmin" value="${p.kategori || ''}" onchange="updateInline('${doc.id}', 'kategori', this.value)" style="padding:5px; border:1px solid #ddd; border-radius:4px; width:100%; box-sizing:border-box;">
+            ${subCatDisplay}
+          </td>
+          <td>
+            <input type="number" value="${p.harga}" onchange="updateInline('${doc.id}', 'harga', this.value)" style="padding:5px; border:1px solid #ddd; border-radius:4px; width:100px;">
+          </td>
+          <td>${statusSelect}</td>
           <td>
             ${featuredDisplay}
           </td>
