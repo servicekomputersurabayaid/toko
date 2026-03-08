@@ -355,25 +355,12 @@ function renderProducts(append = false) {
                 <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
             </div>
         </div>`}).join('');
-    html += '</div>';
     
-    productList.innerHTML = html;
+    grid.insertAdjacentHTML('beforeend', html);
 
-    // Event Listener untuk tombol Tambah
-    productList.querySelectorAll('.btn-add').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            addToCart(e.target.dataset.id);
-        });
-    });
-
-    // Event Listener untuk tombol Wishlist
-    productList.querySelectorAll('.btn-wishlist').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            toggleWishlist(e.currentTarget.dataset.id);
-        });
-    });
-
-    setupPagination(data);
+    // Hapus pagination manual jika ada (karena pakai infinite scroll)
+    const paginationEl = document.getElementById('pagination');
+    if(paginationEl) paginationEl.innerHTML = "";
 }
 
 function setupPagination(data) {
