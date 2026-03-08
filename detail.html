@@ -58,6 +58,10 @@
             
             <!-- Info -->
             <div class="detail-info">
+                <!-- Tombol Edit Khusus Admin -->
+                <button id="btn-edit-admin" class="btn-add" style="display:none; background:#f39c12; width:auto; padding:8px 15px; margin-bottom:10px; font-size:0.9rem;">
+                    <span class="material-icons" style="font-size:1rem; vertical-align:middle; margin-right:5px;">edit</span> Edit Produk
+                </button>
                 <h1 id="d-title">Nama Produk</h1>
                 <div id="rating-summary" class="rating-summary"></div>
                 <div id="d-price" class="detail-price">Rp 0</div>
@@ -570,7 +574,17 @@
                     }
                 } catch(e) {}
 
-                if (user.email === adminEmail) document.body.classList.add('admin-mode');
+                if (user.email === adminEmail) {
+                    document.body.classList.add('admin-mode');
+                    // Tampilkan tombol edit
+                    const btnEdit = document.getElementById('btn-edit-admin');
+                    if(btnEdit) {
+                        btnEdit.style.display = 'inline-block';
+                        btnEdit.addEventListener('click', () => {
+                            window.location.href = `input_produk.html?id=${productId}`;
+                        });
+                    }
+                }
             } else {
                 document.getElementById('review-form-container').style.display = 'none';
                 document.getElementById('login-to-review').style.display = 'block';
