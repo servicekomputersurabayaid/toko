@@ -54,11 +54,14 @@ exports.sitemap = onRequest(async (req, res) => {
             lastMod = data.updatedAt.toDate().toISOString();
         }
 
+        const name = data.judul || data.name || "produk";
+        const slug = encodeURIComponent(name);
+
         // Tambahkan URL Detail Produk
-        // Format URL sesuai detail.html?id=...
+        // Format URL sesuai detail.html?NamaProduk&id=...
         sitemapStream.push(`
           <url>
-            <loc>${YOUR_DOMAIN}/detail.html?id=${doc.id}</loc>
+            <loc>${YOUR_DOMAIN}/detail.html?${slug}&amp;id=${doc.id}</loc>
             <lastmod>${lastMod}</lastmod>
             <changefreq>weekly</changefreq>
             <priority>0.8</priority>

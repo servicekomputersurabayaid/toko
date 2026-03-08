@@ -385,11 +385,11 @@
 
                     html += `
                         <div class="product-card">
-                            <div onclick="window.location.href='detail.html?id=${doc.id}'" style="cursor:pointer">
+                            <div onclick="window.location.href='detail.html?${encodeURIComponent(name)}&id=${doc.id}'" style="cursor:pointer">
                                 <img src="${image}" alt="${name}" class="product-img">
                             </div>
                             <div class="product-info">
-                                <h3 class="product-title" onclick="window.location.href='detail.html?id=${doc.id}'" style="cursor:pointer">${name}</h3>
+                                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(name)}&id=${doc.id}'" style="cursor:pointer">${name}</h3>
                                 <p class="product-price">Rp ${price.toLocaleString('id-ID')}</p>
                                 <button class="btn-add btn-related" data-id="${doc.id}" data-name="${name}" data-price="${price}" data-image="${image}" data-weight="${weight}">
                                     + Keranjang
