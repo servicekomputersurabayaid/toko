@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Gambar Masal - Service Komputer Surabaya ID</title>
+    <title>Kelola Gambar (Upload & Hapus) - Service Komputer Surabaya ID</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 40px; background-color: #f4f4f4; }
         .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -23,15 +23,22 @@
         .modal input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
         .modal button { width: 100%; padding: 10px; background-color: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
         .modal button:hover { background-color: #219150; }
+        /* Preview Styles for URL Delete */
+        .preview-wrapper { position: relative; border: 1px solid #ddd; padding: 5px; border-radius: 4px; background: #fff; }
+        .preview-wrapper img { height: 80px; width: 100px; object-fit: contain; }
+        .preview-wrapper .btn-remove-preview { position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; border: none; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <h2 style="margin: 0;">Upload Gambar Masal</h2>
+            <h2 style="margin: 0;">Kelola Gambar</h2>
             <button id="btnLogout" onclick="logoutAdmin()" class="btn" style="background-color: #e74c3c; display: none; padding: 6px 12px; font-size: 14px;">Logout</button>
         </div>
+        
+        <!-- SECTION 1: UPLOAD -->
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0;">1. Upload Gambar Masal</h3>
         <p>Pilih banyak gambar sekaligus, lalu klik Upload. URL akan muncul di bawah.</p>
         
         <input type="file" id="fileInput" multiple accept="image/*">
@@ -49,7 +56,20 @@
 
         <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
         
-        <h3>Kelola Penyimpanan (Hapus Gambar)</h3>
+        <!-- SECTION 2: DELETE BY URL -->
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">2. Hapus Gambar via URL</h3>
+        <p>Paste URL gambar (Firebase Storage) di sini untuk menghapusnya secara permanen. Bisa banyak sekaligus (pisahkan dengan Enter atau Koma).</p>
+        <textarea id="urlDeleteInput" placeholder="https://firebasestorage.googleapis.com/..." style="height: 100px;" oninput="renderPreviews()"></textarea>
+        <div id="previewArea" style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; min-height: 50px; padding: 10px; background: #fafafa; border-radius: 4px;">
+            <small style="color: #999; margin: auto;">Preview gambar akan muncul di sini...</small>
+        </div>
+        <button onclick="processDeleteUrl()" class="btn" style="background-color: #c0392b; margin-top: 15px; width: 100%;">Hapus Gambar via URL</button>
+        <div id="urlDeleteStatus" style="margin-top: 10px;"></div>
+
+        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
+
+        <!-- SECTION 3: GALLERY -->
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">3. Galeri Penyimpanan (Folder Products)</h3>
         <p>Lihat dan hapus gambar yang sudah tidak terpakai di server.</p>
         <button onclick="loadGallery()" class="btn" style="background-color: #e67e22;">Muat Daftar Gambar</button>
         <button id="btnDeleteSelected" onclick="deleteSelectedImages()" class="btn" style="background-color: #c0392b; display: none; margin-left: 10px;">Hapus Terpilih</button>
@@ -233,6 +253,65 @@
             navigator.clipboard.writeText(copyText.value).then(() => {
                 alert("URL berhasil disalin!");
             });
+        }
+
+        // --- LOGIC HAPUS VIA URL ---
+        window.renderPreviews = function() {
+            const input = document.getElementById('urlDeleteInput');
+            const previewArea = document.getElementById('previewArea');
+            const rawText = input.value;
+            const urls = rawText.split(/[\n\s,|]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+
+            previewArea.innerHTML = '';
+            if (urls.length === 0) {
+                previewArea.innerHTML = '<small style="color: #999; margin: auto;">Preview gambar akan muncul di sini...</small>';
+                return;
+            }
+
+            urls.forEach((url, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'preview-wrapper';
+                wrapper.innerHTML = `
+                    <img src="${url}" onerror="this.src='https://via.placeholder.com/100?text=Error'">
+                    <button class="btn-remove-preview" onclick="removeUrl(${index})">×</button>
+                `;
+                previewArea.appendChild(wrapper);
+            });
+        }
+
+        window.removeUrl = function(index) {
+            const input = document.getElementById('urlDeleteInput');
+            const rawText = input.value;
+            const urls = rawText.split(/[\n\s,|]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+            urls.splice(index, 1);
+            input.value = urls.join('\n');
+            renderPreviews();
+        }
+
+        window.processDeleteUrl = async function() {
+            const input = document.getElementById('urlDeleteInput');
+            const statusDiv = document.getElementById('urlDeleteStatus');
+            const urls = input.value.split(/[\n\s,|]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+
+            if (urls.length === 0) { alert('Masukkan minimal satu URL!'); return; }
+            if (!confirm(`Yakin ingin menghapus ${urls.length} gambar?`)) return;
+
+            statusDiv.innerHTML = "Memproses...";
+            let success = 0;
+            let fail = 0;
+
+            for (const url of urls) {
+                try {
+                    const fileRef = ref(storage, url);
+                    await deleteObject(fileRef);
+                    success++;
+                } catch (error) {
+                    console.error(error);
+                    fail++;
+                }
+            }
+            statusDiv.innerHTML = `<span class="success">Berhasil: ${success}</span> | <span class="error">Gagal: ${fail}</span>`;
+            if(success > 0) { input.value = ''; renderPreviews(); }
         }
 
         window.loadGallery = async function() {
