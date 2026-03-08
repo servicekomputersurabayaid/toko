@@ -115,8 +115,11 @@
 
 
         <h2>Katalog Produk</h2>
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <input type="text" id="search-input" class="search-box" placeholder="Cari produk..." style="margin-bottom: 0; flex: 1;">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <input type="text" id="search-input" class="search-box" placeholder="Cari produk..." style="margin-bottom: 0; flex: 1; min-width: 200px;">
+            <select id="category-select" style="padding: 10px; border-radius: 6px; width: auto; border: 1px solid #ddd;">
+                <option value="all">Semua Kategori</option>
+            </select>
             <select id="sort-select" style="padding: 10px; border-radius: 6px; width: auto;">
                 <option value="default">Urutkan</option>
                 <option value="price-asc">Harga Termurah</option>
@@ -126,9 +129,6 @@
             </select>
         </div>
         
-        <!-- Menu Kategori Horizontal -->
-        <div id="category-list" class="category-menu"></div>
-
         <!-- Menu Sub-Kategori (Muncul saat kategori dipilih) -->
         <div id="subcategory-list" class="category-menu" style="margin-top: -10px; margin-bottom: 20px; font-size: 0.9em; display:none;"></div>
 
