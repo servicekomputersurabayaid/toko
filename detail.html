@@ -62,6 +62,9 @@
                 <button id="btn-edit-admin" class="btn-add" style="display:none; background:#f39c12; width:auto; padding:8px 15px; margin-bottom:10px; font-size:0.9rem;">
                     <span class="material-icons" style="font-size:1rem; vertical-align:middle; margin-right:5px;">edit</span> Edit Produk
                 </button>
+                <button id="btn-delete-admin" class="btn-add" style="display:none; background:#e74c3c; width:auto; padding:8px 15px; margin-bottom:10px; font-size:0.9rem; margin-left:5px;">
+                    <span class="material-icons" style="font-size:1rem; vertical-align:middle; margin-right:5px;">delete</span> Hapus
+                </button>
                 <h1 id="d-title">Nama Produk</h1>
                 <div id="rating-summary" class="rating-summary"></div>
                 <div id="d-price" class="detail-price">Rp 0</div>
@@ -144,8 +147,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, getDocs, query, limit, where, addDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, query, limit, where, addDoc, serverTimestamp, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -160,6 +164,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        const storage = getStorage(app);
 
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
@@ -582,6 +587,32 @@
                         btnEdit.style.display = 'inline-block';
                         btnEdit.addEventListener('click', () => {
                             window.location.href = `input_produk.html?id=${productId}`;
+                        });
+                    }
+                    
+                    // Tampilkan tombol hapus
+                    const btnDelete = document.getElementById('btn-delete-admin');
+                    if(btnDelete) {
+                        btnDelete.style.display = 'inline-block';
+                        btnDelete.addEventListener('click', async () => {
+                            if(confirm("PERINGATAN: Apakah Anda yakin ingin MENGHAPUS produk ini secara permanen?")) {
+                                try {
+                                    // Hapus gambar dari storage jika ada
+                                    if (currentProduct && currentProduct.images) {
+                                        for (const url of currentProduct.images) {
+                                            if (url && url.includes("firebasestorage.googleapis.com")) {
+                                                try { await deleteObject(ref(storage, url)); } catch(e) {}
+                                            }
+                                        }
+                                    }
+                                    // Hapus dokumen
+                                    await deleteDoc(doc(db, "products", productId));
+                                    alert("Produk berhasil dihapus.");
+                                    window.location.href = "index.html";
+                                } catch(e) {
+                                    alert("Gagal menghapus: " + e.message);
+                                }
+                            }
                         });
                     }
                 }
