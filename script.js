@@ -427,7 +427,6 @@ function setupPagination(data) {
 
     // Tombol Next
     if (currentPage < pageCount) paginationEl.appendChild(createBtn(currentPage + 1, '»'));
-    }
 }
 
 function handleSearch(keyword) {
