@@ -152,11 +152,11 @@ function renderFeaturedProducts() {
         <div class="product-card">
             ${discountBadge}
             <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
-            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">
+            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name.trim().replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">
                 <img src="${product.image}" alt="${product.name}" class="product-img">
             </div>
             <div class="product-info">
-                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
+                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name.trim().replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
                 ${priceDisplay}
                 <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
             </div>
@@ -346,11 +346,11 @@ function renderProducts(append = false) {
         <div class="product-card">
             ${discountBadge}
             <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
-            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">
+            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name.trim().replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">
                 <img src="${product.image}" alt="${product.name}" class="product-img">
             </div>
             <div class="product-info">
-                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
+                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name.trim().replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
                 ${priceDisplay}
                 <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
             </div>
@@ -449,7 +449,7 @@ function addToCart(id) {
 
     // Jika produk punya varian, alihkan ke detail page
     if (product.variants && product.variants.length > 0) {
-        window.location.href = `detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${id}`;
+        window.location.href = `detail.html?${encodeURIComponent(product.name.trim().replace(/\s+/g, '-'))}&id=${id}`;
         return;
     }
 
@@ -1236,7 +1236,7 @@ document.getElementById('btn-mobile-history')?.addEventListener('click', () => {
 });
 document.getElementById('btn-mobile-admin')?.addEventListener('click', () => {
     document.getElementById('mobile-menu-modal').style.display = 'none';
-    window.location.href = 'admin';
+    window.location.href = 'admin.html';
 });
 document.getElementById('btn-mobile-track')?.addEventListener('click', () => {
     document.getElementById('mobile-menu-modal').style.display = 'none';
@@ -1375,9 +1375,12 @@ document.getElementById('close-history').addEventListener('click', () => {
 });
 
 // Handle Admin Button Click (Desktop)
-document.getElementById('btn-admin-nav').addEventListener('click', () => {
-    window.location.href = 'admin';
-});
+const btnAdminNav = document.getElementById('btn-admin-nav');
+if (btnAdminNav) {
+    btnAdminNav.addEventListener('click', () => {
+        window.location.href = 'admin.html';
+    });
+}
 
 // Handle Logout
 btnLogoutNav.addEventListener('click', () => signOut(auth));
