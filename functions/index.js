@@ -37,7 +37,7 @@ exports.sitemap = onRequest(async (req, res) => {
     // 3. Ambil Data Produk dari Firestore
     // Kita hanya ambil field yang diperlukan untuk hemat bandwidth
     const productsSnapshot = await db.collection("products")
-      .select("updatedAt", "status", "active") 
+      .select("updatedAt", "status", "active", "judul", "name") 
       .get();
 
     productsSnapshot.forEach((doc) => {
