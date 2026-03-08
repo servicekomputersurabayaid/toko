@@ -152,11 +152,11 @@ function renderFeaturedProducts() {
         <div class="product-card">
             ${discountBadge}
             <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
-            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name)}&id=${product.id}'" style="cursor:pointer">
+            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">
                 <img src="${product.image}" alt="${product.name}" class="product-img">
             </div>
             <div class="product-info">
-                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name)}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
+                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
                 ${priceDisplay}
                 <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
             </div>
@@ -346,11 +346,11 @@ function renderProducts(append = false) {
         <div class="product-card">
             ${discountBadge}
             <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
-            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name)}&id=${product.id}'" style="cursor:pointer">
+            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">
                 <img src="${product.image}" alt="${product.name}" class="product-img">
             </div>
             <div class="product-info">
-                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name)}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
+                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
                 ${priceDisplay}
                 <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
             </div>
@@ -449,7 +449,7 @@ function addToCart(id) {
 
     // Jika produk punya varian, alihkan ke detail page
     if (product.variants && product.variants.length > 0) {
-        window.location.href = `detail.html?${encodeURIComponent(product.name)}&id=${id}`;
+        window.location.href = `detail.html?${encodeURIComponent(product.name.replace(/\s+/g, '-'))}&id=${id}`;
         return;
     }
 

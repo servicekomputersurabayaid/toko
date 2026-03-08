@@ -55,7 +55,7 @@ exports.sitemap = onRequest(async (req, res) => {
         }
 
         const name = data.judul || data.name || "produk";
-        const slug = encodeURIComponent(name);
+        const slug = encodeURIComponent(name.replace(/\s+/g, '-'));
 
         // Tambahkan URL Detail Produk
         // Format URL sesuai detail.html?NamaProduk&id=...
