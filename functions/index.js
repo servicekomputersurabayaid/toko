@@ -55,13 +55,14 @@ exports.sitemap = onRequest(async (req, res) => {
         }
 
         const name = data.judul || data.name || "produk";
-        const slug = encodeURIComponent(name.replace(/\s+/g, '-'));
+        // Gunakan logika slug yang sama dengan detail.html (Canonical)
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
         // Tambahkan URL Detail Produk
-        // Format URL sesuai detail.html?NamaProduk&id=...
+        // Format URL sesuai detail.html?id=...&slug=...
         sitemapStream.push(`
           <url>
-            <loc>${YOUR_DOMAIN}/detail.html?${slug}&amp;id=${doc.id}</loc>
+            <loc>${YOUR_DOMAIN}/detail.html?id=${doc.id}&amp;slug=${slug}</loc>
             <lastmod>${lastMod}</lastmod>
             <changefreq>weekly</changefreq>
             <priority>0.8</priority>

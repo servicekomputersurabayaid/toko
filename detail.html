@@ -178,6 +178,16 @@
             let cleanDesc = product.description.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
             if (cleanDesc.length > 160) cleanDesc = cleanDesc.substring(0, 157) + "...";
 
+            // --- LOGIC CANONICAL URL & SLUG ---
+            // Buat slug yang bersih (lowercase, dash only)
+            const cleanSlug = product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+            
+            // Konstruksi URL Bersih: domain/detail.html?slug=nama-produk&id=123
+            const baseUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            const canonicalUrl = `${baseUrl}?id=${product.id}&slug=${cleanSlug}`;
+
+            // ----------------------------------
+
             // Update Meta Description
             const desc = `Jual ${product.name}. Harga Rp ${priceStr}. ${cleanDesc} Bergaransi & Berkualitas.`;
             
@@ -192,8 +202,21 @@
 
             setOg("og:title", `Jual ${product.name} - Rp ${priceStr}`);
             setOg("og:description", desc);
-            setOg("og:url", window.location.href);
+            setOg("og:url", canonicalUrl); // Gunakan canonical URL untuk Open Graph juga
             if (product.image) setOg("og:image", product.image);
+
+            // Update/Create Link Canonical Tag di <head>
+            let linkCanonical = document.querySelector('link[rel="canonical"]');
+            if (!linkCanonical) {
+                linkCanonical = document.createElement('link');
+                linkCanonical.setAttribute('rel', 'canonical');
+                document.head.appendChild(linkCanonical);
+            }
+            linkCanonical.setAttribute('href', canonicalUrl);
+
+            // Opsional: Ubah URL di address bar browser agar terlihat rapi (tanpa reload)
+            // Ini berguna jika user datang dengan link yang berantakan
+            window.history.replaceState(null, '', canonicalUrl);
         }
 
         function updateBreadcrumb(product) {
@@ -384,11 +407,11 @@
 
                     html += `
                         <div class="product-card">
-                            <div onclick="window.location.href='detail.html?${encodeURIComponent(name.replace(/\s+/g, '-'))}&id=${doc.id}'" style="cursor:pointer">
+                            <div onclick="window.location.href='detail.html?id=${doc.id}&slug=${encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">
                                 <img src="${image}" alt="${name}" class="product-img">
                             </div>
                             <div class="product-info">
-                                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(name.replace(/\s+/g, '-'))}&id=${doc.id}'" style="cursor:pointer">${name}</h3>
+                                <h3 class="product-title" onclick="window.location.href='detail.html?id=${doc.id}&slug=${encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">${name}</h3>
                                 <p class="product-price">Rp ${price.toLocaleString('id-ID')}</p>
                                 <button class="btn-add btn-related" data-id="${doc.id}" data-name="${name}" data-price="${price}" data-image="${image}" data-weight="${weight}">
                                     + Keranjang
