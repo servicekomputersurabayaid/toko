@@ -157,17 +157,8 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Ambil ID dari URL (Support format lama ?id=... dan format baru /produk/slug/id)
-        let productId = new URLSearchParams(window.location.search).get('id');
-        
-        if (!productId) {
-            // Coba ambil dari path: /produk/nama-produk/ID
-            const pathSegments = window.location.pathname.split('/');
-            // Ambil segmen terakhir sebagai ID
-            if (pathSegments.length > 0) {
-                productId = pathSegments[pathSegments.length - 1];
-            }
-        }
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
 
         let currentProduct = null;
         let selectedVariant = null; // Menyimpan varian yang sedang dipilih
@@ -393,11 +384,11 @@
 
                     html += `
                         <div class="product-card">
-                            <div onclick="window.location.href='/produk/${createSlug(name)}/${doc.id}'" style="cursor:pointer">
+                            <div onclick="window.location.href='detail.html?${encodeURIComponent(name)}&id=${doc.id}'" style="cursor:pointer">
                                 <img src="${image}" alt="${name}" class="product-img">
                             </div>
                             <div class="product-info">
-                                <h3 class="product-title" onclick="window.location.href='/produk/${createSlug(name)}/${doc.id}'" style="cursor:pointer">${name}</h3>
+                                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(name)}&id=${doc.id}'" style="cursor:pointer">${name}</h3>
                                 <p class="product-price">Rp ${price.toLocaleString('id-ID')}</p>
                                 <button class="btn-add btn-related" data-id="${doc.id}" data-name="${name}" data-price="${price}" data-image="${image}" data-weight="${weight}">
                                     + Keranjang
@@ -424,16 +415,6 @@
                 console.error("Gagal load related:", e);
                 relatedContainer.innerHTML = "<p>Gagal memuat produk lain.</p>";
             }
-        }
-
-        // Helper Slug (Sama seperti script.js)
-        function createSlug(text) {
-            return text.toString().toLowerCase()
-                .replace(/\s+/g, '-')
-                .replace(/[^\w\-]+/g, '')
-                .replace(/\-\-+/g, '-')
-                .replace(/^-+/, '')
-                .replace(/-+$/, '');
         }
 
         // --- FITUR ULASAN / REVIEW ---

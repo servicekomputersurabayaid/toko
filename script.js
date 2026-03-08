@@ -32,16 +32,6 @@ let isLoading = false; // Status loading infinite scroll
 // KONFIGURASI BINDERBYTE (SERVER SENDIRI)
 const BINDERBYTE_URL = 'https://servicekomputersurabaya.id/binderbyte.php'; // Pastikan file ini diupload
 
-// Helper: Buat Slug URL (Bersih)
-function createSlug(text) {
-    return text.toString().toLowerCase()
-        .replace(/\s+/g, '-')           // Ganti spasi dengan -
-        .replace(/[^\w\-]+/g, '')       // Hapus karakter non-word
-        .replace(/\-\-+/g, '-')         // Ganti multiple - dengan single -
-        .replace(/^-+/, '')             // Trim - dari depan
-        .replace(/-+$/, '');            // Trim - dari belakang
-}
-
 // Fungsi Skeleton Loading
 function showSkeleton() {
     const productList = document.getElementById('product-list');
@@ -162,11 +152,11 @@ function renderFeaturedProducts() {
         <div class="product-card">
             ${discountBadge}
             <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
-            <div onclick="window.location.href='/produk/${createSlug(product.name)}/${product.id}'" style="cursor:pointer">
+            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name)}&id=${product.id}'" style="cursor:pointer">
                 <img src="${product.image}" alt="${product.name}" class="product-img">
             </div>
             <div class="product-info">
-                <h3 class="product-title" onclick="window.location.href='/produk/${createSlug(product.name)}/${product.id}'" style="cursor:pointer">${product.name}</h3>
+                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name)}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
                 ${priceDisplay}
                 <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
             </div>
@@ -356,11 +346,11 @@ function renderProducts(append = false) {
         <div class="product-card">
             ${discountBadge}
             <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
-            <div onclick="window.location.href='/produk/${createSlug(product.name)}/${product.id}'" style="cursor:pointer">
+            <div onclick="window.location.href='detail.html?${encodeURIComponent(product.name)}&id=${product.id}'" style="cursor:pointer">
                 <img src="${product.image}" alt="${product.name}" class="product-img">
             </div>
             <div class="product-info">
-                <h3 class="product-title" onclick="window.location.href='/produk/${createSlug(product.name)}/${product.id}'" style="cursor:pointer">${product.name}</h3>
+                <h3 class="product-title" onclick="window.location.href='detail.html?${encodeURIComponent(product.name)}&id=${product.id}'" style="cursor:pointer">${product.name}</h3>
                 ${priceDisplay}
                 <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
             </div>
@@ -459,7 +449,7 @@ function addToCart(id) {
 
     // Jika produk punya varian, alihkan ke detail page
     if (product.variants && product.variants.length > 0) {
-        window.location.href = `/produk/${createSlug(product.name)}/${id}`;
+        window.location.href = `detail.html?${encodeURIComponent(product.name)}&id=${id}`;
         return;
     }
 
