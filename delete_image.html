@@ -1,0 +1,220 @@
+<!-- d:\DATAC\Documents\GitHub\laptop\delete_image.html -->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hapus Gambar via URL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 20px; }
+        .log-area { font-family: monospace; font-size: 0.85rem; background: #212529; color: #00ff00; padding: 15px; border-radius: 5px; height: 200px; overflow-y: auto; }
+        .log-error { color: #ff4444; }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 800px;">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-trash"></i> Hapus Gambar via URL</h5>
+                <button id="btnLogout" class="btn btn-sm btn-light text-danger fw-bold" style="display: none;">Logout</button>
+            </div>
+            <div class="card-body">
+                <!-- Login Section -->
+                <div id="loginSection">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-lock-fill"></i> Halaman ini terhubung ke Storage <strong>servicekomputersurabaya</strong>. Silakan login untuk melanjutkan.
+                    </div>
+                    <div class="input-group mb-3">
+                        <input type="email" id="email" class="form-control" placeholder="Email Admin">
+                        <input type="password" id="password" class="form-control" placeholder="Password">
+                        <button class="btn btn-dark" onclick="login()">Masuk</button>
+                    </div>
+                    <p id="loginError" class="text-danger small"></p>
+                </div>
+
+                <!-- Delete Section -->
+                <div id="deleteSection" class="d-none">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Masukkan URL Gambar (Bisa dipisah Enter, Spasi, Koma, atau |)</label>
+                        <textarea id="urlInput" class="form-control" rows="5" placeholder="https://firebasestorage.googleapis.com/...&#10;https://firebasestorage.googleapis.com/..."></textarea>
+                        <div class="form-text">Pastikan URL berasal dari project <code>servicekomputersurabaya</code>.</div>
+                    </div>
+
+                    <div id="previewArea" class="d-flex flex-wrap gap-2 p-2 border rounded bg-white mb-3" style="min-height: 100px; align-items: center;">
+                        <small class="text-muted m-auto">Preview gambar akan muncul di sini...</small>
+                    </div>
+                    
+                    <button id="btnDelete" class="btn btn-danger w-100 mb-3" onclick="processDelete()">
+                        <i class="bi bi-trash-fill"></i> Hapus Gambar Permanen
+                    </button>
+
+                    <label class="form-label fw-bold">Status Log:</label>
+                    <div id="logArea" class="log-area">Menunggu perintah...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // KONFIGURASI FIREBASE (Sesuai URL yang Anda berikan: servicekomputersurabaya)
+        // Jika ingin menghapus dari project baru (laptop-e718c), ganti config ini dengan yang ada di admin.js
+        const firebaseConfig = {
+            apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
+            authDomain: "servicekomputersurabaya.firebaseapp.com",
+            projectId: "servicekomputersurabaya",
+            storageBucket: "servicekomputersurabaya.firebasestorage.app",
+            messagingSenderId: "985678673202",
+            appId: "1:985678673202:web:4ab14bfb82fc3dee4ad32b",
+            measurementId: "G-12RJTSNG7S"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+        const auth = getAuth(app);
+
+        // UI Elements
+        const loginSection = document.getElementById('loginSection');
+        const deleteSection = document.getElementById('deleteSection');
+        const btnLogout = document.getElementById('btnLogout');
+        const logArea = document.getElementById('logArea');
+        const urlInput = document.getElementById('urlInput');
+        const previewArea = document.getElementById('previewArea');
+
+        // Auth Listener
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                loginSection.classList.add('d-none');
+                deleteSection.classList.remove('d-none');
+                btnLogout.style.display = 'block';
+                log(`Login berhasil sebagai: ${user.email}`);
+            } else {
+                loginSection.classList.remove('d-none');
+                deleteSection.classList.add('d-none');
+                btnLogout.style.display = 'none';
+                renderPreviews(); // Clear preview on logout
+            }
+        });
+
+        // Fungsi Login
+        window.login = async () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (error) {
+                document.getElementById('loginError').innerText = error.message;
+            }
+        };
+
+        // Fungsi Logout
+        btnLogout.addEventListener('click', () => signOut(auth));
+
+        // Fungsi Log Helper
+        const log = (msg, isError = false) => {
+            const div = document.createElement('div');
+            div.className = isError ? 'log-error' : '';
+            div.innerText = `> ${msg}`;
+            logArea.appendChild(div);
+            logArea.scrollTop = logArea.scrollHeight;
+        };
+
+        // Fungsi Render Preview Gambar
+        const renderPreviews = () => {
+            const rawText = urlInput.value;
+            const urls = rawText.split(/[\n\s,|]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+
+            previewArea.innerHTML = ''; // Hapus preview lama
+
+            if (urls.length === 0) {
+                previewArea.innerHTML = '<small class="text-muted m-auto">Preview gambar akan muncul di sini...</small>';
+                return;
+            }
+
+            urls.forEach((url, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'border rounded p-1 bg-light position-relative';
+                
+                const img = document.createElement('img');
+                img.src = url;
+                img.style.height = '80px';
+                img.style.width = '100px';
+                img.style.objectFit = 'contain';
+                
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center rounded-circle shadow-sm';
+                btn.style.width = '20px';
+                btn.style.height = '20px';
+                btn.style.transform = 'translate(30%, -30%)';
+                btn.innerHTML = '<i class="bi bi-x"></i>';
+                btn.onclick = () => removeUrl(index);
+
+                img.onerror = () => { 
+                    img.remove();
+                    const errDiv = document.createElement('div');
+                    errDiv.className = 'd-flex align-items-center justify-content-center text-danger';
+                    errDiv.style.cssText = 'height: 80px; width: 100px; flex-direction: column; font-size: 0.7rem;';
+                    errDiv.innerHTML = '<i class="bi bi-x-circle-fill fs-4"></i><span>Gagal Muat</span>';
+                    wrapper.insertBefore(errDiv, btn);
+                };
+                
+                wrapper.appendChild(img);
+                wrapper.appendChild(btn);
+                previewArea.appendChild(wrapper);
+            });
+        };
+
+        urlInput.addEventListener('input', renderPreviews);
+
+        // Fungsi Hapus URL dari List (via tombol X di preview)
+        const removeUrl = (index) => {
+            const rawText = urlInput.value;
+            const urls = rawText.split(/[\n\s,|]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+            urls.splice(index, 1);
+            urlInput.value = urls.join('\n'); // Update textarea dengan format baris baru
+            renderPreviews(); // Render ulang
+        };
+
+        // Fungsi Utama Hapus
+        window.processDelete = async () => {
+            const urls = urlInput.value.split(/[\n\s,|]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+
+            if (urls.length === 0) {
+                alert('Masukkan minimal satu URL!');
+                return;
+            }
+
+            if (!confirm(`Yakin ingin menghapus ${urls.length} gambar? Tindakan ini tidak bisa dibatalkan.`)) return;
+
+            const btn = document.getElementById('btnDelete');
+            btn.disabled = true;
+            log('--- Memulai Proses Penghapusan ---');
+
+            for (const url of urls) {
+                try {
+                    // Membuat referensi langsung dari URL lengkap
+                    const fileRef = ref(storage, url);
+                    await deleteObject(fileRef);
+                    log(`BERHASIL: ${url.substring(0, 60)}...`);
+                } catch (error) {
+                    console.error(error);
+                    let errMsg = error.code;
+                    if (error.code === 'storage/object-not-found') errMsg = 'File tidak ditemukan (mungkin sudah dihapus)';
+                    if (error.code === 'storage/invalid-argument') errMsg = 'URL tidak valid atau beda project';
+                    log(`GAGAL: ${errMsg} - ${url.substring(0, 40)}...`, true);
+                }
+            }
+
+            log('--- Selesai ---');
+            btn.disabled = false;
+            urlInput.value = ''; // Bersihkan input
+            renderPreviews(); // Bersihkan preview
+        };
+    </script>
+</body>
+</html>
