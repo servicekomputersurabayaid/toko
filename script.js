@@ -69,6 +69,19 @@ async function loadProducts() {
 
             if (isActive) {
                 // Mapping data dari admin.html (judul, harga) ke frontend (name, price)
+                
+                // Parsing Tanggal yang Lebih Robust
+                let dateObj = new Date(0); // Default 1970
+                if (data.createdAt) {
+                    if (typeof data.createdAt.toDate === 'function') {
+                        dateObj = data.createdAt.toDate(); // Firestore Timestamp
+                    } else if (data.createdAt.seconds) {
+                        dateObj = new Date(data.createdAt.seconds * 1000); // Raw Timestamp Object
+                    } else {
+                        dateObj = new Date(data.createdAt); // String/Date Object
+                    }
+                }
+
                 products.push({
                     id: doc.id,
                     name: data.judul || data.name || "Produk Tanpa Nama",
@@ -82,7 +95,7 @@ async function loadProducts() {
                     variants: data.variants || data.varian || [], // Load Varian
                     isFeatured: data.isFeatured || false, // Tambahkan ini
                     featuredOrder: data.featuredOrder || 99, // Tambahkan ini
-                    date: data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(0) // Load Tanggal
+                    date: dateObj // Load Tanggal yang sudah diparsing
                 });
             }
         });
