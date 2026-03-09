@@ -29,6 +29,12 @@ let currentActiveCategory = 'all'; // Menyimpan kategori yang sedang aktif
 let currentFilteredData = []; // Data hasil filter untuk infinite scroll
 let isLoading = false; // Status loading infinite scroll
 
+// --- KONFIGURASI REKENING BANK ---
+const BANK_INFO = {
+    bca: { no: "1010836642", an: "Indah Wahyuning Aprilia" },
+    bri: { no: "717901010257532", an: "Indah Wahyuning Aprilia" }
+};
+
 // KONFIGURASI BINDERBYTE (SERVER SENDIRI)
 const BINDERBYTE_URL = 'https://servicekomputersurabaya.id/binderbyte.php'; // Pastikan file ini diupload
 
@@ -748,9 +754,9 @@ ${shippingLine}
 *Total Bayar: Rp ${total.toLocaleString('id-ID')}*
 
 Silakan transfer ke:
-BCA: 1010836642
-BRI: 717901010257532
-An. Indah Wahyuning Aprilia (Admin: ${storeConfig ? storeConfig.storeName : 'Service komputer Surabaya'})
+BCA: ${BANK_INFO.bca.no}
+BRI: ${BANK_INFO.bri.no}
+An. ${BANK_INFO.bca.an}
 
 Terima kasih!`;
 
@@ -899,13 +905,13 @@ function printInvoice(data) {
                 <div style="display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; text-align: center;">
                     <div>
                         <img src="assets/bank-bca.png" style="height: 40px; display: block; margin: 0 auto 5px;">
-                        <p style="margin: 2px 0;"><strong>1010836642</strong></p>
-                        <p style="margin: 0; font-size: 0.9em;">Indah Wahyuning Aprilia</p>
+                        <p style="margin: 2px 0;"><strong>${BANK_INFO.bca.no}</strong></p>
+                        <p style="margin: 0; font-size: 0.9em;">${BANK_INFO.bca.an}</p>
                     </div>
                     <div>
                         <img src="assets/bank-bri.png" style="height: 40px; display: block; margin: 0 auto 5px;">
-                        <p style="margin: 2px 0;"><strong>717901010257532</strong></p>
-                        <p style="margin: 0; font-size: 0.9em;">Indah Wahyuning Aprilia</p>
+                        <p style="margin: 2px 0;"><strong>${BANK_INFO.bri.no}</strong></p>
+                        <p style="margin: 0; font-size: 0.9em;">${BANK_INFO.bri.an}</p>
                     </div>
                     <div>
                         <img src="assets/qris.png" style="max-width: 70px; border: 1px solid #ddd; display: block; margin: 0 auto 5px;">
