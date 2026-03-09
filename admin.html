@@ -226,6 +226,9 @@
         <option value="draft">Draft</option>
         <option value="inactive">Nonaktif</option>
     </select>
+    <select id="filterCategory" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
+        <option value="">Semua Kategori</option>
+    </select>
     <input type="text" id="searchInput" onkeyup="handleSearchInput(event)" placeholder="Cari nama produk (tekan Enter)..." class="search-admin" style="margin-bottom: 0; flex: 1; padding: 12px; font-size: 1rem; border-radius: 6px;">
 </div>
 
@@ -1083,11 +1086,15 @@ async function loadProducts(mode = 'refresh') {
     const productsRef = collection(db, "products");
     const searchInput = document.getElementById("searchInput").value.trim().toLowerCase();
     const statusFilter = document.getElementById("filterStatus").value;
+    const categoryFilter = document.getElementById("filterCategory").value;
 
     // --- Membangun Query Dinamis ---
     let queryConstraints = [];
     if (statusFilter) {
         queryConstraints.push(where("status", "==", statusFilter));
+    }
+    if (categoryFilter) {
+        queryConstraints.push(where("kategori", "==", categoryFilter));
     }
     if (searchInput) {
         queryConstraints.push(where("judul_lowercase", ">=", searchInput));
@@ -1139,12 +1146,21 @@ async function loadProducts(mode = 'refresh') {
     categories.forEach(c => window.allEncounteredCategories.add(c));
 
     const exportCatSelect = document.getElementById('exportCategoryFilter');
+    const filterCatSelect = document.getElementById('filterCategory');
     if(exportCatSelect) {
         const currentVal = exportCatSelect.value;
         let catOptions = `<option value="all">Semua Kategori</option>`;
         Array.from(window.allEncounteredCategories).sort().forEach(c => catOptions += `<option value="${c}">${c}</option>`);
         exportCatSelect.innerHTML = catOptions;
         exportCatSelect.value = currentVal;
+    }
+    
+    if(filterCatSelect) {
+        const currentVal = filterCatSelect.value;
+        let catOptions = `<option value="">Semua Kategori</option>`;
+        Array.from(window.allEncounteredCategories).sort().forEach(c => catOptions += `<option value="${c}">${c}</option>`);
+        filterCatSelect.innerHTML = catOptions;
+        filterCatSelect.value = currentVal;
     }
 
     const datalist = document.getElementById('categoryListAdmin');
