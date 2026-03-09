@@ -81,7 +81,8 @@ async function loadProducts() {
                     image: data.image_url || "https://via.placeholder.com/150",
                     variants: data.variants || data.varian || [], // Load Varian
                     isFeatured: data.isFeatured || false, // Tambahkan ini
-                    featuredOrder: data.featuredOrder || 99 // Tambahkan ini
+                    featuredOrder: data.featuredOrder || 99, // Tambahkan ini
+                    date: data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(0) // Load Tanggal
                 });
             }
         });
@@ -290,6 +291,8 @@ function applyFilters() {
         else if (criteria === 'price-desc') filtered.sort((a, b) => b.price - a.price);
         else if (criteria === 'name-asc') filtered.sort((a, b) => a.name.localeCompare(b.name));
         else if (criteria === 'name-desc') filtered.sort((a, b) => b.name.localeCompare(a.name));
+        else if (criteria === 'date-desc') filtered.sort((a, b) => b.date - a.date);
+        else if (criteria === 'date-asc') filtered.sort((a, b) => a.date - b.date);
     }
 
     // Simpan hasil filter ke global variable
