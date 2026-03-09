@@ -241,6 +241,27 @@ window.filterCategory = function(category) {
     const select = document.getElementById('category-select');
     if(select && select.value !== category) select.value = category;
     
+    // Update Tombol Share Kategori
+    const shareBtn = document.getElementById('btn-share-category');
+    if (shareBtn) {
+        if (category !== 'all') {
+            shareBtn.style.display = 'inline-flex';
+            shareBtn.onclick = () => {
+                const shareUrl = `${window.location.origin}${window.location.pathname}?category=${encodeURIComponent(category)}`;
+                const text = `Lihat produk kategori ${category} di Service Komputer Surabaya: ${shareUrl}`;
+                
+                if (navigator.share) {
+                    navigator.share({ title: `Kategori ${category}`, text: text, url: shareUrl }).catch(console.error);
+                } else {
+                    // Fallback ke WhatsApp
+                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                }
+            };
+        } else {
+            shareBtn.style.display = 'none';
+        }
+    }
+
     const subCatContainer = document.getElementById('subcategory-list');
 
     if (category === 'all') {
