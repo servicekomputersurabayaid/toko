@@ -247,11 +247,8 @@
   <tbody></tbody>
 </table>
 
-<!-- Pagination Controls -->
-<div style="margin-top: 20px; display: flex; justify-content: center; gap: 15px; align-items: center;">
-    <button onclick="changePage(-1)" id="btnPrev" class="btn" style="background:#7f8c8d; color:white;" disabled>Previous</button>
-    <span id="pageIndicator" style="font-weight:bold; color:#2c3e50;">Halaman 1</span>
-    <button onclick="changePage(1)" id="btnNext" class="btn" style="background:#3498db; color:white;">Next</button>
+<div id="loadingIndicator" style="text-align: center; padding: 20px; display: none; color: #666;">
+    Sedang memuat data...
 </div>
 
 <!-- Edit Form Modal -->
@@ -993,10 +990,10 @@ window.printOrderInvoice = function() {
 window.productsData = {}; // Simpan data produk di memori
 
 // Variabel Pagination
-let currentPage = 1;
-const itemsPerPage = 20;
-let pageSnapshots = []; // Menyimpan dokumen terakhir dari setiap halaman untuk cursor
+let lastVisibleDoc = null;
+let isLoading = false;
 let isLastPage = false;
+const itemsPerPage = 20;
 
 window.handleSearchInput = function(event) {
     // Trigger search on Enter key
@@ -1005,13 +1002,14 @@ window.handleSearchInput = function(event) {
     }
 }
 
-window.changePage = function(delta) {
-    if (delta === 1 && !isLastPage) {
-        loadProducts('next');
-    } else if (delta === -1 && currentPage > 1) {
-        loadProducts('prev');
+// Infinite Scroll Listener
+window.addEventListener('scroll', () => {
+    if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
+        if (!isLastPage && !isLoading) {
+            loadProducts('next');
+        }
     }
-}
+});
 
 window.updateInline = async function(id, field, value, element) {
     // Visual feedback: Saving (Opacity reduced)
@@ -1065,8 +1063,20 @@ window.updateInline = async function(id, field, value, element) {
 }
 
 async function loadProducts(mode = 'refresh') {
+  if (isLoading) return;
+
   const tbody = document.querySelector("#productTable tbody");
-  tbody.innerHTML = "<tr><td colspan='7'>Memuat...</td></tr>";
+  const loadingIndicator = document.getElementById("loadingIndicator");
+
+  if (mode === 'refresh') {
+      tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;'>Memuat...</td></tr>";
+      window.productsData = {};
+      lastVisibleDoc = null;
+      isLastPage = false;
+  }
+
+  isLoading = true;
+  if(loadingIndicator) loadingIndicator.style.display = 'block';
   
   try {
     let q;
@@ -1089,28 +1099,23 @@ async function loadProducts(mode = 'refresh') {
     }
 
     if (mode === 'refresh') {
-        currentPage = 1;
-        pageSnapshots = [];
         document.getElementById('selectAll').checked = false; // Reset select all
         updateBulkDeleteButton(); // Reset button visibility
         q = query(productsRef, ...queryConstraints, limit(itemsPerPage));
-    } else if (mode === 'next') {
-        const lastVisible = pageSnapshots[currentPage - 1];
-        q = query(productsRef, ...queryConstraints, startAfter(lastVisible), limit(itemsPerPage));
-        currentPage++;
-    } else if (mode === 'prev') {
-        currentPage--;
-        if (currentPage > 1) {
-            const prevLastVisible = pageSnapshots[currentPage - 2];
-            q = query(productsRef, ...queryConstraints, startAfter(prevLastVisible), limit(itemsPerPage));
-        } else {
-            q = query(productsRef, ...queryConstraints, limit(itemsPerPage));
-        }
+    } else {
+        // mode === 'next'
+        q = query(productsRef, ...queryConstraints, startAfter(lastVisibleDoc), limit(itemsPerPage));
     }
 
     const querySnapshot = await getDocs(q);
-    tbody.innerHTML = "";
-    window.productsData = {}; // Reset data
+    
+    if (mode === 'refresh') tbody.innerHTML = "";
+
+    if (querySnapshot.empty) {
+        isLastPage = true;
+        if (mode === 'refresh') tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;'>Tidak ada data.</td></tr>";
+        return;
+    }
     
     // Update state pagination
     if (querySnapshot.docs.length < itemsPerPage) {
@@ -1119,10 +1124,8 @@ async function loadProducts(mode = 'refresh') {
         isLastPage = false;
     }
 
-    // Simpan dokumen terakhir halaman ini untuk navigasi next
-    if (querySnapshot.docs.length > 0) {
-        pageSnapshots[currentPage - 1] = querySnapshot.docs[querySnapshot.docs.length - 1];
-    }
+    // Simpan dokumen terakhir untuk cursor next
+    lastVisibleDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
 
     // Collect categories for datalist
     const categories = new Set();
@@ -1205,23 +1208,15 @@ async function loadProducts(mode = 'refresh') {
           </td>
         </tr>
       `;
-      tbody.innerHTML += row;
+      tbody.insertAdjacentHTML('beforeend', row);
     });
-
-    // Update UI Pagination
-    document.getElementById('pageIndicator').innerText = `Halaman ${currentPage}`;
-    document.getElementById('btnPrev').disabled = (currentPage === 1);
-    document.getElementById('btnNext').disabled = isLastPage;
-
-    if (querySnapshot.empty && currentPage > 1) {
-        tbody.innerHTML = "<tr><td colspan='7'>Tidak ada data lagi.</td></tr>";
-    } else if (querySnapshot.empty) {
-        tbody.innerHTML = "<tr><td colspan='7'>Belum ada produk yang cocok dengan filter.</td></tr>";
-    }
 
   } catch (e) {
     console.error(e);
-    tbody.innerHTML = `<tr><td colspan='7' style='color:red;'>Gagal memuat data: ${e.message}<br><small>Kemungkinan Anda perlu membuat Index di Firestore. Cek console browser (F12) untuk link pembuatan index.</small></td></tr>`;
+    if (mode === 'refresh') tbody.innerHTML = `<tr><td colspan='9' style='color:red;'>Gagal memuat data: ${e.message}</td></tr>`;
+  } finally {
+    isLoading = false;
+    if(loadingIndicator) loadingIndicator.style.display = 'none';
   }
 }
 
