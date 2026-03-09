@@ -177,7 +177,7 @@
 <button onclick="exportCSV()">Download CSV (Export)</button>
 <button onclick="deleteAllProducts()" style="background-color: #d32f2f; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Hapus Semua Data</button>
 <button onclick="restoreData()" style="background-color: #2196F3; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Restore Data Terakhir</button>
-<button onclick="fixProductDates()" style="background-color: #f39c12; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Perbaiki Tanggal (Fix Sort)</button>
+<button onclick="fixProductDates()" style="background-color: #f39c12; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Perbaiki Data (Fix Sort/Filter)</button>
 <button onclick="window.open('upload_images.html', '_blank')" style="background-color: #9c27b0; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Upload Gambar Masal</button>
 <button onclick="window.open('input_produk.html', '_blank')" style="background-color: #27ae60; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Input Produk Manual</button>
 <button id="btnBulkDelete" onclick="deleteSelectedProducts()" style="background-color: #c0392b; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px; display: none;">Hapus Terpilih</button>
@@ -795,11 +795,11 @@ window.restoreData = async function() {
 }
 
 window.fixProductDates = async function() {
-    const confirmed = await showCustomConfirm("Fitur ini akan mengisi tanggal 'createdAt' pada produk yang kosong agar fitur Sortir berfungsi.\n\nLanjutkan?");
+    const confirmed = await showCustomConfirm("Fitur ini akan melengkapi data (tanggal & status) pada produk yang kosong agar fitur Sortir & Filter berfungsi.\n\nLanjutkan?");
     if(!confirmed) return;
 
     const status = document.getElementById("status");
-    status.innerHTML = "Sedang memperbaiki data tanggal...";
+    status.innerHTML = "Sedang memperbaiki struktur data...";
 
     try {
         const querySnapshot = await getDocs(collection(db, "products"));
@@ -808,16 +808,32 @@ window.fixProductDates = async function() {
 
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            // Jika createdAt tidak ada, isi dengan waktu sekarang (atau updatedAt jika ada)
+            const updates = {};
+            let needsUpdate = false;
+
+            // 1. Fix Date (Isi jika kosong, atau convert jika String agar bisa disortir)
             if (!data.createdAt) {
-                const newDate = data.updatedAt || new Date();
-                promises.push(updateDoc(doc.ref, { createdAt: newDate }));
+                updates.createdAt = data.updatedAt || new Date();
+                needsUpdate = true;
+            } else if (typeof data.createdAt === 'string') {
+                updates.createdAt = new Date(data.createdAt);
+                needsUpdate = true;
+            }
+
+            // 2. Fix Status (Pastikan field status ada untuk filter)
+            if (!data.status) {
+                updates.status = (data.active === false) ? 'inactive' : 'active';
+                needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+                promises.push(updateDoc(doc.ref, updates));
                 count++;
             }
         });
 
         await Promise.all(promises);
-        status.innerHTML = `Selesai! ${count} produk diperbaiki tanggalnya. Silakan refresh.`;
+        status.innerHTML = `Selesai! ${count} produk diperbaiki datanya. Silakan refresh.`;
         loadProducts();
     } catch (e) {
         console.error(e);
@@ -1109,7 +1125,7 @@ async function loadProducts(mode = 'refresh') {
   try {
     let q;
     const productsRef = collection(db, "products");
-    const searchInput = document.getElementById("searchInput").value.toLowerCase();
+    const searchInput = document.getElementById("searchInput").value.trim().toLowerCase();
     const statusFilter = document.getElementById("filterStatus").value;
     const sortOrder = document.getElementById("sortOrder").value;
 
