@@ -919,6 +919,10 @@ function printInvoice(data) {
                     </div>
                 </div>
             </div>
+
+            <p style="margin-top: 25px; font-size: 0.9em; color: #777;">
+                Jln. Medokan Sawah Timur Gg. 1A No. 10 Kav. 22A | +62 899 4335 111 | www.servicekomputersurabaya.id
+            </div>
         </div>
 
         <div class="no-print" style="text-align: center; margin-top: 30px;">
