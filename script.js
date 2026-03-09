@@ -328,8 +328,8 @@ function applyFilters() {
     // 3. Filter Rentang Harga
     const minPriceInput = document.getElementById('min-price');
     const maxPriceInput = document.getElementById('max-price');
-    const minPrice = minPriceInput ? (parseInt(minPriceInput.value) || 0) : 0;
-    const maxPrice = maxPriceInput ? (parseInt(maxPriceInput.value) || Infinity) : Infinity;
+    const minPrice = minPriceInput ? (parseInt(minPriceInput.value.replace(/\./g, '')) || 0) : 0;
+    const maxPrice = maxPriceInput ? (parseInt(maxPriceInput.value.replace(/\./g, '')) || Infinity) : Infinity;
 
     if (minPrice > 0 || maxPrice < Infinity) {
         filtered = filtered.filter(p => {
@@ -511,12 +511,20 @@ if (btnPriceFilter) {
 // Bonus: Terapkan filter saat menekan Enter di kolom harga
 const minPriceInput = document.getElementById('min-price');
 if (minPriceInput) {
+    minPriceInput.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\D/g, '');
+        e.target.value = value ? parseInt(value).toLocaleString('id-ID') : '';
+    });
     minPriceInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') applyFilters();
     });
 }
 const maxPriceInput = document.getElementById('max-price');
 if (maxPriceInput) {
+    maxPriceInput.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\D/g, '');
+        e.target.value = value ? parseInt(value).toLocaleString('id-ID') : '';
+    });
     maxPriceInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') applyFilters();
     });
