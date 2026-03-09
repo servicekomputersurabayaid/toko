@@ -831,15 +831,19 @@ Terima kasih!`;
 
 function printInvoice(data) {
     const date = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
-    const itemsHtml = data.cart.map((item, i) => `
+    const itemsHtml = data.cart.map((item, i) => {
+        const total = item.price * item.qty;
+        const totalDisplay = total >= 1000000 ? `Rp<br>${total.toLocaleString('id-ID')}` : `Rp ${total.toLocaleString('id-ID')}`;
+
+        return `
         <tr>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${i + 1}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.qty}</td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">Rp ${item.price.toLocaleString('id-ID')}</td>
-            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${totalDisplay}</td>
         </tr>
-    `).join('');
+    `}).join('');
 
     const html = `
     <!DOCTYPE html>
