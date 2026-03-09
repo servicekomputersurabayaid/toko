@@ -168,6 +168,9 @@
     <option value="draft">Draft</option>
     <option value="inactive">Nonaktif</option>
 </select>
+<select id="exportCategoryFilter" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-left: 5px;">
+    <option value="all">Semua Kategori</option>
+</select>
 <button onclick="exportCSV()">Download CSV (Export)</button>
 <button onclick="deleteAllProducts()" style="background-color: #d32f2f; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Hapus Semua Data</button>
 <button onclick="restoreData()" style="background-color: #2196F3; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Restore Data Terakhir</button>
@@ -609,7 +612,8 @@ window.uploadCSV = async function(){
 window.exportCSV = async function() {
   const status = document.getElementById("status");
   const filterStatus = document.getElementById("exportStatusFilter").value;
-  status.innerHTML = `Sedang mengekspor data (${filterStatus})...`;
+  const filterCategory = document.getElementById("exportCategoryFilter").value;
+  status.innerHTML = `Sedang mengekspor data (${filterStatus} - ${filterCategory})...`;
 
   try {
     const querySnapshot = await getDocs(collection(db, "products"));
@@ -632,6 +636,10 @@ window.exportCSV = async function() {
       // Filter Logic
       if (filterStatus !== 'all' && itemStatus !== filterStatus) {
           return; 
+      }
+      
+      if (filterCategory !== 'all' && data.kategori !== filterCategory) {
+          return;
       }
 
       count++;
@@ -697,7 +705,7 @@ window.exportCSV = async function() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `data_produk_${filterStatus}_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `data_produk_${filterStatus}_${filterCategory}_${new Date().toISOString().slice(0,10)}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -1113,6 +1121,20 @@ async function loadProducts(mode = 'refresh') {
         const d = doc.data();
         if(d.kategori) categories.add(d.kategori);
     });
+
+    // Accumulate categories globally to improve dropdown over pagination
+    if (!window.allEncounteredCategories) window.allEncounteredCategories = new Set();
+    categories.forEach(c => window.allEncounteredCategories.add(c));
+
+    const exportCatSelect = document.getElementById('exportCategoryFilter');
+    if(exportCatSelect) {
+        const currentVal = exportCatSelect.value;
+        let catOptions = `<option value="all">Semua Kategori</option>`;
+        Array.from(window.allEncounteredCategories).sort().forEach(c => catOptions += `<option value="${c}">${c}</option>`);
+        exportCatSelect.innerHTML = catOptions;
+        exportCatSelect.value = currentVal;
+    }
+
     const datalist = document.getElementById('categoryListAdmin');
     if(datalist) datalist.innerHTML = Array.from(categories).map(c => `<option value="${c}">`).join('');
 

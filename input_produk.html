@@ -52,14 +52,16 @@
             </div>
             <div>
                 <label>Kategori *</label>
-                <input type="text" id="kategori" required placeholder="Contoh: Laptop">
+                <input type="text" id="kategori" required placeholder="Contoh: Laptop" list="categoryList" autocomplete="off">
+                <datalist id="categoryList"></datalist>
             </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div>
                 <label>Sub Kategori</label>
-                <input type="text" id="sub_kategori" placeholder="Contoh: Gaming">
+                <input type="text" id="sub_kategori" placeholder="Contoh: Gaming" list="subCategoryList" autocomplete="off">
+                <datalist id="subCategoryList"></datalist>
             </div>
             <div>
                 <label>Status</label>
@@ -130,7 +132,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, getDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -152,6 +154,27 @@
             document.getElementById('loginModal').style.display = 'block';
         }
     });
+
+    // Load Categories for Datalist (Agar muncul pilihan kategori yang sudah ada)
+    async function loadCategories() {
+        try {
+            const querySnapshot = await getDocs(collection(db, "products"));
+            const categories = new Set();
+            const subCategories = new Set();
+
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.kategori) categories.add(data.kategori);
+                if (data.sub_kategori) subCategories.add(data.sub_kategori);
+            });
+
+            document.getElementById('categoryList').innerHTML = Array.from(categories).sort().map(c => `<option value="${c}">`).join('');
+            document.getElementById('subCategoryList').innerHTML = Array.from(subCategories).sort().map(s => `<option value="${s}">`).join('');
+        } catch (error) {
+            console.error("Error loading categories:", error);
+        }
+    }
+    loadCategories();
 
     window.addVariantRow = function(name='', price='', weight='') {
         const container = document.getElementById("variantContainer");

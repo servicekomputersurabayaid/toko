@@ -77,6 +77,7 @@ async function loadProducts() {
                     weight: parseInt(data.berat || data.weight || 1000), // Ambil berat (gram)
                     category: data.kategori || "Umum",
                     subCategory: data.sub_kategori || "", // Load Sub Kategori
+                    shortDesc: data.deskripsi_singkat || "", // Load Deskripsi Singkat
                     image: data.image_url || "https://via.placeholder.com/150",
                     variants: data.variants || data.varian || [], // Load Varian
                     isFeatured: data.isFeatured || false, // Tambahkan ini
@@ -157,6 +158,7 @@ function renderFeaturedProducts() {
             </div>
             <div class="product-info">
                 <h3 class="product-title" onclick="window.location.href='detail.html?id=${product.id}&slug=${encodeURIComponent(product.name.trim().replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">${product.name}</h3>
+                ${product.shortDesc ? `<p class="product-short-desc">${product.shortDesc}</p>` : ''}
                 ${priceDisplay}
                 <button class="btn-add" data-id="${product.id}">${hasVariants ? 'Pilih Varian' : '+ Keranjang'}</button>
             </div>
