@@ -76,7 +76,7 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div>
                 <label>Harga Modal (Rp)</label>
-                <input type="number" id="harga_modal" placeholder="0" oninput="calculatePrice()">
+                <input type="text" id="harga_modal" placeholder="0" oninput="formatInput(this); calculatePrice()">
             </div>
             <div>
                 <label>Margin (%)</label>
@@ -87,11 +87,11 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px;">
             <div>
                 <label>Harga (Rp) * <a href="#" onclick="toggleManualPrice(event)" style="font-size: 0.8rem; float: right; text-decoration: none; color: #3498db;">Hitung otomatis</a></label>
-                <input type="number" id="harga" required placeholder="0">
+                <input type="text" id="harga" required placeholder="0" oninput="formatInput(this)">
             </div>
             <div>
                 <label>Harga Coret (Rp)</label>
-                <input type="number" id="harga_diskon" placeholder="Opsional (Diskon)">
+                <input type="text" id="harga_diskon" placeholder="Opsional (Diskon)" oninput="formatInput(this)">
             </div>
             <div>
                 <label>Stok</label>
@@ -180,13 +180,29 @@
     }
     loadCategories();
 
+    // --- Format Rupiah Logic ---
+    window.formatInput = function(input) {
+        let value = input.value.replace(/\D/g, ''); // Hapus karakter selain angka
+        if (value !== '') {
+            input.value = parseInt(value).toLocaleString('id-ID'); // Tambah titik
+        } else {
+            input.value = '';
+        }
+    }
+
+    window.getRawNumber = function(id) {
+        const el = document.getElementById(id);
+        if(!el) return 0;
+        return parseInt(el.value.replace(/\./g, '')) || 0; // Hapus titik sebelum diproses
+    }
+
     window.addVariantRow = function(name='', price='', weight='') {
         const container = document.getElementById("variantContainer");
         const div = document.createElement('div');
         div.className = 'variant-row';
         div.innerHTML = `
             <input type="text" placeholder="Nama Varian (ex: Merah)" class="var-name" value="${name}" style="flex:2;">
-            <input type="number" placeholder="Harga" class="var-price" value="${price}" style="flex:1;">
+            <input type="text" placeholder="Harga" class="var-price" value="${price ? parseInt(price).toLocaleString('id-ID') : ''}" style="flex:1;" oninput="formatInput(this)">
             <input type="number" placeholder="Berat(g)" class="var-weight" value="${weight}" style="flex:1;">
             <button type="button" class="btn-remove-var" onclick="this.parentElement.remove()">X</button>
         `;
@@ -258,12 +274,12 @@
     window.calculatePrice = function() {
         const hargaJualInput = document.getElementById('harga');
         if (hargaJualInput.readOnly) {
-            const hargaModal = parseFloat(document.getElementById('harga_modal').value) || 0;
+            const hargaModal = getRawNumber('harga_modal');
             const margin = parseFloat(document.getElementById('margin').value) || 0;
             
             if (hargaModal > 0) {
                 const hargaJual = hargaModal + (hargaModal * (margin / 100));
-                hargaJualInput.value = Math.round(hargaJual);
+                hargaJualInput.value = Math.round(hargaJual).toLocaleString('id-ID');
             } else {
                 hargaJualInput.value = 0;
             }
@@ -307,13 +323,13 @@
                 document.getElementById('kategori').value = data.kategori || "";
                 document.getElementById('sub_kategori').value = data.sub_kategori || "";
                 document.getElementById('status').value = data.status || (data.active === false ? 'inactive' : 'active');
-                document.getElementById('harga').value = data.harga || 0;
-                document.getElementById('harga_diskon').value = data.harga_diskon || 0;
+                document.getElementById('harga').value = (data.harga || 0).toLocaleString('id-ID');
+                document.getElementById('harga_diskon').value = (data.harga_diskon || 0).toLocaleString('id-ID');
                 document.getElementById('stok').value = data.stok || 0;
 
                 // Load harga modal dan hitung ulang margin jika ada
                 const hargaModal = data.harga_modal || 0;
-                document.getElementById('harga_modal').value = hargaModal;
+                document.getElementById('harga_modal').value = hargaModal.toLocaleString('id-ID');
                 if (hargaModal > 0 && data.harga > hargaModal) {
                     const margin = ((data.harga - hargaModal) / hargaModal) * 100;
                     document.getElementById('margin').value = Math.round(margin);
@@ -350,7 +366,8 @@
             let variants = [];
             variantRows.forEach(row => {
                 const name = row.querySelector('.var-name').value;
-                const price = parseInt(row.querySelector('.var-price').value) || 0;
+                const priceStr = row.querySelector('.var-price').value;
+                const price = parseInt(priceStr.replace(/\./g, '')) || 0;
                 const weight = parseInt(row.querySelector('.var-weight').value) || 0;
                 if(name) variants.push({ name, price, weight });
             });
@@ -363,9 +380,9 @@
                 judul_lowercase: document.getElementById('judul').value.trim().toLowerCase(),
                 kategori: document.getElementById('kategori').value,
                 sub_kategori: document.getElementById('sub_kategori').value,
-                harga_modal: parseInt(document.getElementById('harga_modal').value) || 0,
-                harga: parseInt(document.getElementById('harga').value) || 0,
-                harga_diskon: parseInt(document.getElementById('harga_diskon').value) || 0,
+                harga_modal: getRawNumber('harga_modal'),
+                harga: getRawNumber('harga'),
+                harga_diskon: getRawNumber('harga_diskon'),
                 stok: parseInt(document.getElementById('stok').value) || 0,
                 berat: parseInt(document.getElementById('berat').value) || 1000,
                 image_url: imgList[0] || "",

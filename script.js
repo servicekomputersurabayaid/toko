@@ -248,13 +248,15 @@ window.filterCategory = function(category) {
             shareBtn.style.display = 'inline-flex';
             shareBtn.onclick = () => {
                 const shareUrl = `${window.location.origin}${window.location.pathname}?category=${encodeURIComponent(category)}`;
-                const text = `Lihat produk kategori ${category} di Service Komputer Surabaya: ${shareUrl}`;
+                const baseText = `Lihat produk kategori ${category} di Service Komputer Surabaya`;
                 
                 if (navigator.share) {
-                    navigator.share({ title: `Kategori ${category}`, text: text, url: shareUrl }).catch(console.error);
+                    // Browser otomatis menggabungkan text + url
+                    navigator.share({ title: `Kategori ${category}`, text: baseText, url: shareUrl }).catch(console.error);
                 } else {
-                    // Fallback ke WhatsApp
-                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                    // Fallback ke WhatsApp (gabung manual)
+                    const waText = `${baseText}: ${shareUrl}`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, '_blank');
                 }
             };
         } else {
@@ -323,16 +325,30 @@ function applyFilters() {
         filtered = filtered.filter(p => p.name.toLowerCase().includes(keyword));
     }
 
-    // 3. Sorting
+    // 3. Filter Rentang Harga
+    const minPriceInput = document.getElementById('min-price');
+    const maxPriceInput = document.getElementById('max-price');
+    const minPrice = minPriceInput ? (parseInt(minPriceInput.value) || 0) : 0;
+    const maxPrice = maxPriceInput ? (parseInt(maxPriceInput.value) || Infinity) : Infinity;
+
+    if (minPrice > 0 || maxPrice < Infinity) {
+        filtered = filtered.filter(p => {
+            const price = p.price;
+            // Pastikan harga produk berada di antara min dan max
+            return price >= minPrice && price <= maxPrice;
+        });
+    }
+
+    // 4. Sorting
     const sortSelect = document.getElementById('sort-select');
     if (sortSelect) {
         const criteria = sortSelect.value;
-        if (criteria === 'price-asc') filtered.sort((a, b) => a.price - b.price);
-        else if (criteria === 'price-desc') filtered.sort((a, b) => b.price - a.price);
-        else if (criteria === 'name-asc') filtered.sort((a, b) => a.name.localeCompare(b.name));
-        else if (criteria === 'name-desc') filtered.sort((a, b) => b.name.localeCompare(a.name));
-        else if (criteria === 'date-desc') filtered.sort((a, b) => b.date - a.date);
-        else if (criteria === 'date-asc') filtered.sort((a, b) => a.date - b.date);
+        if (criteria === 'price-asc') filtered.sort((a, b) => a.price - b.price); // Harga Termurah
+        else if (criteria === 'price-desc') filtered.sort((a, b) => b.price - a.price); // Harga Termahal
+        else if (criteria === 'name-asc') filtered.sort((a, b) => a.name.localeCompare(b.name)); // Nama A-Z
+        else if (criteria === 'name-desc') filtered.sort((a, b) => b.name.localeCompare(a.name)); // Nama Z-A
+        else if (criteria === 'date-desc') filtered.sort((a, b) => b.date - a.date); // Terbaru
+        else if (criteria === 'date-asc') filtered.sort((a, b) => a.date - b.date); // Terlama
     }
 
     // Simpan hasil filter ke global variable
@@ -485,6 +501,25 @@ if (categorySelect) {
 const sortSelect = document.getElementById('sort-select');
 if (sortSelect) {
     sortSelect.addEventListener('change', (e) => sortProducts(e.target.value));
+}
+
+// Event Listener untuk Filter Harga
+const btnPriceFilter = document.getElementById('btn-apply-price-filter');
+if (btnPriceFilter) {
+    btnPriceFilter.addEventListener('click', applyFilters);
+}
+// Bonus: Terapkan filter saat menekan Enter di kolom harga
+const minPriceInput = document.getElementById('min-price');
+if (minPriceInput) {
+    minPriceInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') applyFilters();
+    });
+}
+const maxPriceInput = document.getElementById('max-price');
+if (maxPriceInput) {
+    maxPriceInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') applyFilters();
+    });
 }
 
 // 2. Logic Keranjang
@@ -1356,10 +1391,16 @@ document.getElementById('btn-submit-login').addEventListener('click', async () =
         }
         loginModal.style.display = 'none';
     } catch (error) {
+        let displayMessage = error.message;
+        // Hapus awalan "Firebase: " jika ada
+        if (displayMessage.startsWith("Firebase: ")) {
+            displayMessage = displayMessage.substring("Firebase: ".length);
+        }
+
         if (error.code === 'auth/operation-not-allowed') {
-            showAlert("Error: Metode login ini belum diaktifkan di Firebase Console.");
+            showAlert("Metode login ini belum diaktifkan di Firebase Console.");
         } else {
-            showAlert("Error: " + error.message);
+            showAlert(displayMessage);
         }
     }
 });
@@ -1376,7 +1417,12 @@ document.getElementById('forgot-password').addEventListener('click', async (e) =
         await sendPasswordResetEmail(auth, email);
         showAlert(`Link reset password telah dikirim ke ${email}. Silakan cek email Anda.`);
     } catch (error) {
-        showAlert("Gagal mengirim reset password: " + error.message);
+        let displayMessage = error.message;
+        // Hapus awalan "Firebase: " jika ada
+        if (displayMessage.startsWith("Firebase: ")) {
+            displayMessage = displayMessage.substring("Firebase: ".length);
+        }
+        showAlert("Gagal mengirim reset password: " + displayMessage);
     }
 });
 
