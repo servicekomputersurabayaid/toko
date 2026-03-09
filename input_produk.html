@@ -84,7 +84,7 @@
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px;">
             <div>
                 <label>Harga (Rp) * <a href="#" onclick="toggleManualPrice(event)" style="font-size: 0.8rem; float: right; text-decoration: none; color: #3498db;">Hitung otomatis</a></label>
                 <input type="number" id="harga" required placeholder="0">
@@ -92,6 +92,10 @@
             <div>
                 <label>Harga Coret (Rp)</label>
                 <input type="number" id="harga_diskon" placeholder="Opsional (Diskon)">
+            </div>
+            <div>
+                <label>Stok</label>
+                <input type="number" id="stok" placeholder="0">
             </div>
             <div>
                 <label>Berat (Gram)</label>
@@ -305,6 +309,7 @@
                 document.getElementById('status').value = data.status || (data.active === false ? 'inactive' : 'active');
                 document.getElementById('harga').value = data.harga || 0;
                 document.getElementById('harga_diskon').value = data.harga_diskon || 0;
+                document.getElementById('stok').value = data.stok || 0;
 
                 // Load harga modal dan hitung ulang margin jika ada
                 const hargaModal = data.harga_modal || 0;
@@ -361,6 +366,7 @@
                 harga_modal: parseInt(document.getElementById('harga_modal').value) || 0,
                 harga: parseInt(document.getElementById('harga').value) || 0,
                 harga_diskon: parseInt(document.getElementById('harga_diskon').value) || 0,
+                stok: parseInt(document.getElementById('stok').value) || 0,
                 berat: parseInt(document.getElementById('berat').value) || 1000,
                 image_url: imgList[0] || "",
                 images: imgList,
