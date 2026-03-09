@@ -177,7 +177,6 @@
 <button onclick="exportCSV()">Download CSV (Export)</button>
 <button onclick="deleteAllProducts()" style="background-color: #d32f2f; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Hapus Semua Data</button>
 <button onclick="restoreData()" style="background-color: #2196F3; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Restore Data Terakhir</button>
-<button onclick="fixProductDates()" style="background-color: #f39c12; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Perbaiki Data (Fix Sort/Filter)</button>
 <button onclick="window.open('upload_images.html', '_blank')" style="background-color: #9c27b0; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Upload Gambar Masal</button>
 <button onclick="window.open('input_produk.html', '_blank')" style="background-color: #27ae60; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Input Produk Manual</button>
 <button id="btnBulkDelete" onclick="deleteSelectedProducts()" style="background-color: #c0392b; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px; display: none;">Hapus Terpilih</button>
@@ -226,12 +225,6 @@
         <option value="active">Aktif</option>
         <option value="draft">Draft</option>
         <option value="inactive">Nonaktif</option>
-    </select>
-    <select id="sortOrder" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
-        <option value="date-desc">Terbaru</option>
-        <option value="date-asc">Terlama</option>
-        <option value="category">Kategori (A-Z)</option>
-        <option value="name-asc">Nama (A-Z)</option>
     </select>
     <input type="text" id="searchInput" onkeyup="handleSearchInput(event)" placeholder="Cari nama produk (tekan Enter)..." class="search-admin" style="margin-bottom: 0; flex: 1; padding: 12px; font-size: 1rem; border-radius: 6px;">
 </div>
@@ -794,53 +787,6 @@ window.restoreData = async function() {
   }
 }
 
-window.fixProductDates = async function() {
-    const confirmed = await showCustomConfirm("Fitur ini akan melengkapi data (tanggal & status) pada produk yang kosong agar fitur Sortir & Filter berfungsi.\n\nLanjutkan?");
-    if(!confirmed) return;
-
-    const status = document.getElementById("status");
-    status.innerHTML = "Sedang memperbaiki struktur data...";
-
-    try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        let count = 0;
-        const promises = [];
-
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const updates = {};
-            let needsUpdate = false;
-
-            // 1. Fix Date (Isi jika kosong, atau convert jika String agar bisa disortir)
-            if (!data.createdAt) {
-                updates.createdAt = data.updatedAt || new Date();
-                needsUpdate = true;
-            } else if (typeof data.createdAt === 'string') {
-                updates.createdAt = new Date(data.createdAt);
-                needsUpdate = true;
-            }
-
-            // 2. Fix Status (Pastikan field status ada untuk filter)
-            if (!data.status) {
-                updates.status = (data.active === false) ? 'inactive' : 'active';
-                needsUpdate = true;
-            }
-
-            if (needsUpdate) {
-                promises.push(updateDoc(doc.ref, updates));
-                count++;
-            }
-        });
-
-        await Promise.all(promises);
-        status.innerHTML = `Selesai! ${count} produk diperbaiki datanya. Silakan refresh.`;
-        loadProducts();
-    } catch (e) {
-        console.error(e);
-        status.innerHTML = "Gagal memperbaiki: " + e.message;
-    }
-}
-
 // --- Fitur Daftar Pesanan ---
 
 window.ordersData = {};
@@ -1127,7 +1073,6 @@ async function loadProducts(mode = 'refresh') {
     const productsRef = collection(db, "products");
     const searchInput = document.getElementById("searchInput").value.trim().toLowerCase();
     const statusFilter = document.getElementById("filterStatus").value;
-    const sortOrder = document.getElementById("sortOrder").value;
 
     // --- Membangun Query Dinamis ---
     let queryConstraints = [];
@@ -1140,17 +1085,7 @@ async function loadProducts(mode = 'refresh') {
         queryConstraints.push(orderBy("judul_lowercase")); // Urutan utama harus field yang di-filter range
         queryConstraints.push(orderBy("createdAt", "desc")); // Secondary sort saat search
     } else {
-        // Apply Sort Order (Hanya jika tidak sedang searching)
-        if (sortOrder === 'date-asc') {
-            queryConstraints.push(orderBy("createdAt", "asc"));
-        } else if (sortOrder === 'category') {
-            queryConstraints.push(orderBy("kategori", "asc"));
-            queryConstraints.push(orderBy("createdAt", "desc")); // Secondary sort
-        } else if (sortOrder === 'name-asc') {
-            queryConstraints.push(orderBy("judul_lowercase", "asc"));
-        } else {
-            queryConstraints.push(orderBy("createdAt", "desc")); // Default: Terbaru
-        }
+        queryConstraints.push(orderBy("createdAt", "desc")); // Default: Terbaru
     }
 
     if (mode === 'refresh') {
