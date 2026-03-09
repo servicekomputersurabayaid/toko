@@ -244,6 +244,7 @@
       <th>Kategori</th>
       <th>Harga</th>
       <th>Harga Coret</th>
+      <th>Stok</th>
       <th>Status</th>
       <th>Featured</th>
       <th>Aksi</th>
@@ -576,6 +577,7 @@ window.uploadCSV = async function(){
       harga: hargaJual,
       harga_diskon: parseInt(data.harga_diskon) || 0,
       harga_modal: hargaModal,
+      stok: parseInt(data.stok) || 0,
       kategori: data.kategori || "Umum",
       sub_kategori: data.sub_kategori || "", // Tambahkan Sub Kategori
       berat: parseInt(data.berat) || 1000, // Default 1000 gram jika kosong
@@ -628,7 +630,7 @@ window.exportCSV = async function() {
     const querySnapshot = await getDocs(collection(db, "products"));
     
     // Header CSV yang sesuai dengan format upload (agar bisa di-import lagi)
-    const headers = ["id", "judul", "kategori", "sub_kategori", "harga", "harga_modal", "margin", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status", "variants"];
+    const headers = ["id", "judul", "kategori", "sub_kategori", "harga", "stok", "harga_modal", "margin", "berat", "image_url", "deskripsi_singkat", "deskripsi_panjang", "harga_diskon", "status", "variants"];
     let csvContent = headers.join(",") + "\n";
     let count = 0;
 
@@ -1028,6 +1030,8 @@ window.updateInline = async function(id, field, value, element) {
         updateData.harga = parseInt(value) || 0;
     } else if (field === 'harga_diskon') {
         updateData.harga_diskon = parseInt(value) || 0;
+    } else if (field === 'stok') {
+        updateData.stok = parseInt(value) || 0;
     } else if (field === 'status') {
         updateData.status = value;
         updateData.active = (value === 'active');
@@ -1202,6 +1206,9 @@ async function loadProducts(mode = 'refresh') {
           </td>
           <td>
             <input type="number" value="${p.harga_diskon || 0}" onchange="updateInline('${doc.id}', 'harga_diskon', this.value, this)" style="padding:5px; border:1px solid #ddd; border-radius:4px; width:100px; color:#888;" placeholder="0">
+          </td>
+          <td>
+            <input type="number" value="${p.stok || 0}" onchange="updateInline('${doc.id}', 'stok', this.value, this)" style="padding:5px; border:1px solid #ddd; border-radius:4px; width:70px; text-align:center;" placeholder="0">
           </td>
           <td>${statusSelect}</td>
           <td>
