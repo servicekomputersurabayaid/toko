@@ -407,3 +407,33 @@ input, textarea {
     -ms-user-select: text !important;
     user-select: text !important;
 }
+
+/* Back to Top Button */
+#btn-back-to-top {
+    position: fixed;
+    bottom: 100px; /* Di atas tombol WA (Desktop) */
+    right: 20px;
+    z-index: 998;
+    border: none;
+    background-color: #2c3e50;
+    color: white;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    display: none; /* Hidden default */
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    transition: opacity 0.3s, transform 0.3s, background-color 0.3s;
+}
+#btn-back-to-top:hover {
+    background-color: #34495e;
+    transform: translateY(-3px);
+}
+@media (max-width: 768px) {
+    #btn-back-to-top {
+        bottom: 150px; /* Di atas tombol WA (Mobile) */
+    }
+}
