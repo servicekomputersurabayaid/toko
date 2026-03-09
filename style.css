@@ -411,9 +411,9 @@ input, textarea {
 /* Back to Top Button */
 #btn-back-to-top {
     position: fixed;
-    bottom: 100px; /* Di atas tombol WA (Desktop) */
+    bottom: 110px; /* Di atas tombol WA (Desktop) */
     right: 20px;
-    z-index: 998;
+    z-index: 1001; /* Lebih tinggi dari tombol WA (1000) */
     border: none;
     background-color: #2c3e50;
     color: white;
@@ -434,6 +434,6 @@ input, textarea {
 }
 @media (max-width: 768px) {
     #btn-back-to-top {
-        bottom: 150px; /* Di atas tombol WA (Mobile) */
+        bottom: 170px; /* Di atas tombol WA (Mobile) */
     }
 }
