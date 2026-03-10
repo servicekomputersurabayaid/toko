@@ -372,19 +372,24 @@
             await uploadBytes(newRef, blob);
             const newUrl = await getDownloadURL(newRef);
 
-            // 2. Hapus file lama
-            await deleteObject(oldRef);
-
-            // 3. Update Input UI
+            // 2. Update Input UI & Database DULUAN (Supaya user lihat hasil)
             urls[index] = newUrl;
             input.value = urls.join(' | ');
             renderPreviews(input.value);
 
-            // 4. Auto-Save ke Firestore jika sedang Edit Mode (PENTING agar tidak broken link)
+            // 3. Auto-Save ke Firestore jika sedang Edit Mode
             if (editId && !isDuplicate) {
                 await updateDoc(doc(db, "products", editId), { image_url: urls[0], images: urls });
                 console.log("Database otomatis diupdate dengan nama file baru.");
             }
+
+            // 4. Hapus file lama (Cleanup)
+            try {
+                await deleteObject(oldRef);
+            } catch (delErr) {
+                console.warn("Gagal menghapus file lama:", delErr);
+            }
+
             alert("Berhasil rename!");
         } catch (e) {
             console.error(e);

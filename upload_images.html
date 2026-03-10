@@ -527,8 +527,12 @@
                 const newRef = ref(storage, newFullPath);
                 await uploadBytes(newRef, blob);
 
-                // 3. Hapus file lama
-                await deleteObject(oldRef);
+                // 3. Hapus file lama (Cleanup)
+                try {
+                    await deleteObject(oldRef);
+                } catch (delErr) {
+                    console.warn("Gagal menghapus file lama:", delErr);
+                }
 
                 alert("Berhasil rename!");
                 loadGallery(); // Refresh galeri
