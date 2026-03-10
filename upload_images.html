@@ -43,6 +43,9 @@
         
         <input type="file" id="fileInput" multiple accept="image/*">
         <br>
+        <input type="text" id="seoFilename" placeholder="Nama File SEO (Opsional, misal: laptop-gaming-asus)" style="width: 100%; padding: 10px; margin-top: 10px; border: 1px solid #ddd; border-radius: 4px;">
+        <p style="font-size: 0.8rem; color: #666; margin-top: 5px;">Jika diisi, gambar akan direname menjadi <strong>nama-seo-[random].jpg</strong>.</p>
+
         <label style="font-size: 0.9rem; color: #555;"><input type="checkbox" id="compressToggle" checked> Kompres Gambar Otomatis (Hemat Kuota & Storage)</label>
         <br><br>
         <button onclick="uploadImages()" class="btn btn-upload">Mulai Upload</button>
@@ -195,6 +198,7 @@
         window.uploadImages = async function() {
             const fileInput = document.getElementById('fileInput');
             const compressToggle = document.getElementById('compressToggle');
+            const seoInput = document.getElementById('seoFilename');
             const files = fileInput.files;
             const statusDiv = document.getElementById('status');
             const output = document.getElementById('urlOutput');
@@ -215,7 +219,8 @@
 
             for (let i = 0; i < files.length; i++) {
                 let file = files[i];
-                let fileName = `products/${Date.now()}_${file.name}`;
+                let fileName;
+                let isCompressed = false;
                 
                 try {
                     // Logika Kompresi
@@ -223,13 +228,23 @@
                         statusDiv.innerHTML += `<div class="status-item">⏳ Mengompres <b>${file.name}</b>...</div>`;
                         const compressedBlob = await compressImage(file, 0.7, 1000); // Quality 0.7, Max Width 1000px
                         file = compressedBlob;
-                        // Ubah ekstensi jadi .jpg karena hasil kompresi canvas adalah jpeg
+                        isCompressed = true;
+                    }
+
+                    // Logic Rename (SEO vs Default)
+                    const seoText = seoInput.value.trim();
+                    if (seoText) {
+                        const cleanName = seoText.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').toLowerCase();
+                        const randomSuffix = Math.random().toString(36).substring(2, 8); // Random word 6 chars
+                        const ext = isCompressed ? 'jpg' : files[i].name.split('.').pop();
+                        fileName = `products/${cleanName}-${randomSuffix}.${ext}`;
+                    } else {
                         const originalName = files[i].name.substring(0, files[i].name.lastIndexOf('.')) || files[i].name;
-                        fileName = `products/${Date.now()}_${originalName}.jpg`;
+                        fileName = isCompressed ? `products/${Date.now()}_${originalName}.jpg` : `products/${Date.now()}_${files[i].name}`;
                     }
 
                     const storageRef = ref(storage, fileName);
-                    statusDiv.innerHTML += `<div class="status-item">⬆️ Mengupload <b>${fileName}</b>...</div>`;
+                    statusDiv.innerHTML += `<div class="status-item">⬆️ Mengupload <b>${fileName.split('/').pop()}</b>...</div>`;
                     
                     const snapshot = await uploadBytes(storageRef, file);
                     const url = await getDownloadURL(snapshot.ref);
