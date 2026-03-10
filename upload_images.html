@@ -71,8 +71,22 @@
 
         <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
 
-        <!-- SECTION 3: GALLERY -->
-        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">3. Galeri Penyimpanan (Folder Products)</h3>
+        <!-- SECTION 3: RENAME VIA CSV -->
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">3. Rename Gambar Masal via CSV</h3>
+        <p>Gunakan ini jika gambar terlalu banyak untuk dimuat di galeri. Upload CSV dengan format: <strong>URL_LAMA, NAMA_BARU</strong> (tanpa header).</p>
+        <p style="font-size: 0.8rem; color: #666;">
+            Contoh isi CSV:<br>
+            <code>https://firebasestorage.../img1.jpg, laptop-asus-rog</code><br>
+            <code>https://firebasestorage.../img2.jpg, mouse-logitech</code>
+        </p>
+        <input type="file" id="csvRenameInput" accept=".csv">
+        <button onclick="processCsvRename()" class="btn" style="background-color: #8e44ad; margin-top: 10px; color: white;">Mulai Rename Masal</button>
+        <div id="renameStatus" style="margin-top: 10px; max-height: 200px; overflow-y: auto; background: #fafafa; padding: 10px; border: 1px solid #eee;"></div>
+
+        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
+
+        <!-- SECTION 4: GALLERY -->
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">4. Galeri Penyimpanan (Folder Products)</h3>
         <p>Lihat dan hapus gambar yang sudah tidak terpakai di server.</p>
         <button onclick="loadGallery()" class="btn" style="background-color: #e67e22;">Muat Daftar Gambar</button>
         <button id="btnDeleteSelected" onclick="deleteSelectedImages()" class="btn" style="background-color: #c0392b; display: none; margin-left: 10px;">Hapus Terpilih</button>
@@ -329,6 +343,66 @@
             if(success > 0) { input.value = ''; renderPreviews(); }
         }
 
+        window.processCsvRename = async function() {
+            const fileInput = document.getElementById('csvRenameInput');
+            const statusDiv = document.getElementById('renameStatus');
+            
+            if (!auth.currentUser) { alert("Silakan login terlebih dahulu!"); return; }
+            if (fileInput.files.length === 0) { alert("Pilih file CSV terlebih dahulu!"); return; }
+
+            const file = fileInput.files[0];
+            const text = await file.text();
+            const rows = text.split('\n');
+
+            statusDiv.innerHTML = "<div>Memulai proses rename...</div>";
+            let successCount = 0;
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i].trim();
+                if (!row) continue;
+
+                // Pisahkan berdasarkan koma pertama (URL, Nama Baru)
+                const firstCommaIndex = row.indexOf(',');
+                if (firstCommaIndex === -1) continue;
+
+                const oldUrl = row.substring(0, firstCommaIndex).trim();
+                let newNameRaw = row.substring(firstCommaIndex + 1).trim();
+
+                if (!oldUrl || !newNameRaw) continue;
+
+                try {
+                    statusDiv.innerHTML += `<div>⏳ Memproses: ${newNameRaw}...</div>`;
+                    
+                    // 1. Download File Lama
+                    const oldRef = ref(storage, oldUrl);
+                    const url = await getDownloadURL(oldRef);
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+
+                    // 2. Tentukan Nama Baru (SEO Friendly + Random Suffix)
+                    // Ambil ekstensi dari URL lama (sebelum query params)
+                    const urlPath = oldUrl.split('?')[0];
+                    const ext = urlPath.includes('.') ? urlPath.split('.').pop() : 'jpg';
+                    
+                    const cleanName = newNameRaw.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').toLowerCase();
+                    const randomSuffix = Math.random().toString(36).substring(2, 8);
+                    const newFullPath = `products/${cleanName}-${randomSuffix}.${ext}`;
+
+                    // 3. Upload ke Path Baru & Hapus Lama
+                    const newRef = ref(storage, newFullPath);
+                    await uploadBytes(newRef, blob);
+                    await deleteObject(oldRef);
+
+                    statusDiv.innerHTML += `<div class="success">✅ Berhasil: ${cleanName}-${randomSuffix}.${ext}</div>`;
+                    successCount++;
+                } catch (e) {
+                    console.error(e);
+                    statusDiv.innerHTML += `<div class="error">❌ Gagal (${newNameRaw}): ${e.message}</div>`;
+                }
+            }
+            statusDiv.innerHTML += `<div>--- Selesai (${successCount} file) ---</div>`;
+        }
+
         window.loadGallery = async function() {
             const gallery = document.getElementById('gallery');
             const statusDiv = document.getElementById('status');
@@ -364,7 +438,10 @@
                             <img src="${url}" style="max-width: 100%; max-height: 100%;">
                         </div>
                         <div style="font-size: 0.7rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px;">${itemRef.name}</div>
-                        <button onclick="deleteImage('${itemRef.fullPath}')" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 0.8rem;">Hapus</button>
+                        <div style="display:flex; gap:5px; justify-content:center;">
+                            <button onclick="renameImage('${itemRef.fullPath}')" style="background: #f39c12; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 0.8rem;">Rename</button>
+                            <button onclick="deleteImage('${itemRef.fullPath}')" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 0.8rem;">Hapus</button>
+                        </div>
                     `;
                     gallery.appendChild(div);
                 }
@@ -421,6 +498,47 @@
             // Cek jika galeri kosong
             if (document.getElementById('gallery').children.length === 0) {
                 document.getElementById('gallery').innerHTML = "<p>Tidak ada gambar di folder products.</p>";
+            }
+        }
+
+        window.renameImage = async function(fullPath) {
+            const oldName = fullPath.split('/').pop();
+            const ext = oldName.split('.').pop();
+            const baseName = oldName.substring(0, oldName.lastIndexOf('.'));
+            
+            let newName = prompt("Masukkan nama file baru (tanpa ekstensi):", baseName);
+            if (!newName || newName === baseName) return;
+
+            // Format SEO Friendly (huruf kecil, spasi jadi dash)
+            newName = newName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').toLowerCase();
+            const newFullPath = `products/${newName}.${ext}`;
+
+            if(!confirm(`Rename file ini menjadi "${newName}.${ext}"?`)) return;
+
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status-item">⏳ Memproses rename...</div>`;
+
+            try {
+                // 1. Dapatkan URL & Blob dari file lama
+                const oldRef = ref(storage, fullPath);
+                const url = await getDownloadURL(oldRef);
+                const response = await fetch(url);
+                const blob = await response.blob();
+
+                // 2. Upload ke path baru
+                const newRef = ref(storage, newFullPath);
+                await uploadBytes(newRef, blob);
+
+                // 3. Hapus file lama
+                await deleteObject(oldRef);
+
+                alert("Berhasil rename!");
+                loadGallery(); // Refresh galeri
+                statusDiv.innerHTML = `<div class="status-item success">✅ Rename berhasil: ${newName}.${ext}</div>`;
+            } catch (e) {
+                console.error(e);
+                alert("Gagal rename: " + e.message);
+                statusDiv.innerHTML = `<div class="status-item error">❌ Gagal rename: ${e.message}</div>`;
             }
         }
 
