@@ -106,7 +106,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject, getBlob } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         // Konfigurasi Firebase (Sama dengan script.js)
@@ -375,9 +375,8 @@
                     
                     // 1. Download File Lama
                     const oldRef = ref(storage, oldUrl);
-                    const url = await getDownloadURL(oldRef);
-                    const response = await fetch(url);
-                    const blob = await response.blob();
+                    // Menggunakan getBlob untuk menghindari masalah CORS "failed to fetch"
+                    const blob = await getBlob(oldRef);
 
                     // 2. Tentukan Nama Baru (SEO Friendly + Random Suffix)
                     // Ambil ekstensi dari URL lama (sebelum query params)
@@ -521,9 +520,8 @@
             try {
                 // 1. Dapatkan URL & Blob dari file lama
                 const oldRef = ref(storage, fullPath);
-                const url = await getDownloadURL(oldRef);
-                const response = await fetch(url);
-                const blob = await response.blob();
+                // Menggunakan getBlob untuk menghindari masalah CORS "failed to fetch"
+                const blob = await getBlob(oldRef);
 
                 // 2. Upload ke path baru
                 const newRef = ref(storage, newFullPath);

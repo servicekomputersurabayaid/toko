@@ -165,7 +165,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, doc, getDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getBlob } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -365,8 +365,8 @@
         try {
             // 1. Download & Upload Ulang (Rename)
             const oldRef = ref(storage, oldPath);
-            const response = await fetch(oldUrl);
-            const blob = await response.blob();
+            // Menggunakan getBlob untuk menghindari masalah CORS "failed to fetch"
+            const blob = await getBlob(oldRef);
             
             const newRef = ref(storage, newFullPath);
             await uploadBytes(newRef, blob);
