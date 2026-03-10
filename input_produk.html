@@ -364,6 +364,7 @@
 
         // Tampilkan indikator loading pada tombol
         const btnRename = document.querySelectorAll('.btn-rename-img')[index];
+        const originalBtnContent = btnRename ? btnRename.innerHTML : '✎';
         if(btnRename) {
             btnRename.innerHTML = '⏳';
             btnRename.disabled = true;
@@ -372,8 +373,18 @@
         try {
             // 1. Download & Upload Ulang (Rename)
             const oldRef = ref(storage, oldPath);
-            // Menggunakan getBlob untuk menghindari masalah CORS "failed to fetch"
-            const blob = await getBlob(oldRef);
+            
+            let blob;
+            try {
+                // Coba getBlob dulu (standar SDK)
+                blob = await getBlob(oldRef);
+            } catch (blobErr) {
+                console.warn("getBlob gagal, mencoba fetch manual...", blobErr);
+                // Fallback fetch jika getBlob bermasalah (misal isu CORS spesifik)
+                const response = await fetch(oldUrl);
+                if (!response.ok) throw new Error("Gagal download gambar lama.");
+                blob = await response.blob();
+            }
             
             const newRef = ref(storage, newFullPath);
             await uploadBytes(newRef, blob);
@@ -404,7 +415,7 @@
             // Restore tombol jika gagal dan UI belum direfresh
             const btn = document.querySelectorAll('.btn-rename-img')[index];
             if(btn) {
-                btn.innerHTML = '✎';
+                btn.innerHTML = originalBtnContent;
                 btn.disabled = false;
             }
         }
