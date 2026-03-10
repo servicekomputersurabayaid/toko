@@ -380,10 +380,15 @@
                 blob = await getBlob(oldRef);
             } catch (blobErr) {
                 console.warn("getBlob gagal, mencoba fetch manual...", blobErr);
-                // Fallback fetch jika getBlob bermasalah (misal isu CORS spesifik)
-                const response = await fetch(oldUrl);
-                if (!response.ok) throw new Error("Gagal download gambar lama.");
-                blob = await response.blob();
+                
+                try {
+                    // Fallback fetch jika getBlob bermasalah
+                    const response = await fetch(oldUrl);
+                    if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+                    blob = await response.blob();
+                } catch (fetchErr) {
+                    throw new Error(`Gagal download gambar. Kemungkinan masalah CORS pada Firebase Storage. Detail: ${fetchErr.message}`);
+                }
             }
             
             const newRef = ref(storage, newFullPath);
@@ -412,7 +417,8 @@
         } catch (e) {
             console.error(e);
             alert("Gagal rename: " + e.message);
-            // Restore tombol jika gagal dan UI belum direfresh
+        } finally {
+            // Restore tombol (baik sukses maupun gagal)
             const btn = document.querySelectorAll('.btn-rename-img')[index];
             if(btn) {
                 btn.innerHTML = originalBtnContent;
