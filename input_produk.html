@@ -32,6 +32,8 @@
         .preview-item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
         .preview-item .btn-delete-img { position: absolute; top: 2px; right: 2px; background: rgba(231, 76, 60, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 14px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
         .preview-item .btn-delete-img:hover { background: #c0392b; }
+        .preview-item .btn-rename-img { position: absolute; top: 2px; right: 28px; background: rgba(243, 156, 18, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .preview-item .btn-rename-img:hover { background: #e67e22; }
         .preview-item.dragging { opacity: 0.4; border: 2px dashed #3498db; transform: scale(0.9); }
         .preview-item.over { border: 2px dashed #27ae60; }
     </style>
@@ -138,6 +140,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, doc, getDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -152,6 +155,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+    const storage = getStorage(app);
 
     onAuthStateChanged(auth, (user) => {
         if (!user) {
@@ -223,6 +227,7 @@
             
             div.innerHTML = `
                 <img src="${url}" onerror="this.src='https://via.placeholder.com/100?text=Error'">
+                <button type="button" class="btn-rename-img" onclick="renameProductImage(${index})" title="Rename File (SEO)">✎</button>
                 <button type="button" class="btn-delete-img" onclick="removeImage(${index})" title="Hapus Gambar">×</button>
             `;
             
@@ -243,6 +248,63 @@
         urls.splice(index, 1);
         input.value = urls.join(' | ');
         renderPreviews(input.value);
+    }
+
+    window.renameProductImage = async function(index) {
+        const input = document.getElementById('image_url');
+        let urls = input.value.split('|').map(u => u.trim()).filter(u => u);
+        const oldUrl = urls[index];
+
+        if (!oldUrl.includes("firebasestorage")) {
+            alert("Hanya gambar yang dihosting di Firebase yang bisa direname.");
+            return;
+        }
+
+        // Ambil nama file lama dari URL
+        const decodedUrl = decodeURIComponent(oldUrl);
+        const oldPath = decodedUrl.split('/o/')[1].split('?')[0];
+        const oldName = oldPath.split('/').pop();
+        const ext = oldName.split('.').pop();
+        const baseName = oldName.substring(0, oldName.lastIndexOf('.'));
+
+        let newName = prompt("Masukkan nama file baru (SEO Friendly):", baseName);
+        if (!newName || newName === baseName) return;
+
+        // Format SEO
+        newName = newName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').toLowerCase();
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        const newFullPath = `products/${newName}-${randomSuffix}.${ext}`;
+
+        if(!confirm(`Rename menjadi "${newName}-${randomSuffix}.${ext}"?`)) return;
+
+        try {
+            // 1. Download & Upload Ulang (Rename)
+            const oldRef = ref(storage, oldPath);
+            const response = await fetch(oldUrl);
+            const blob = await response.blob();
+            
+            const newRef = ref(storage, newFullPath);
+            await uploadBytes(newRef, blob);
+            const newUrl = await getDownloadURL(newRef);
+
+            // 2. Hapus file lama
+            await deleteObject(oldRef);
+
+            // 3. Update Input UI
+            urls[index] = newUrl;
+            input.value = urls.join(' | ');
+            renderPreviews(input.value);
+
+            // 4. Auto-Save ke Firestore jika sedang Edit Mode (PENTING agar tidak broken link)
+            if (editId && !isDuplicate) {
+                await updateDoc(doc(db, "products", editId), { image_url: urls[0], images: urls });
+                console.log("Database otomatis diupdate dengan nama file baru.");
+            }
+            alert("Berhasil rename!");
+        } catch (e) {
+            console.error(e);
+            alert("Gagal rename: " + e.message);
+        }
     }
 
     let dragSrcEl = null;
