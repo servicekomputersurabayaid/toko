@@ -362,6 +362,13 @@
         const confirmed = await showCustomConfirm(`Rename menjadi "${newName}-${randomSuffix}.${ext}"?`);
         if(!confirmed) return;
 
+        // Tampilkan indikator loading pada tombol
+        const btnRename = document.querySelectorAll('.btn-rename-img')[index];
+        if(btnRename) {
+            btnRename.innerHTML = '⏳';
+            btnRename.disabled = true;
+        }
+
         try {
             // 1. Download & Upload Ulang (Rename)
             const oldRef = ref(storage, oldPath);
@@ -394,6 +401,12 @@
         } catch (e) {
             console.error(e);
             alert("Gagal rename: " + e.message);
+            // Restore tombol jika gagal dan UI belum direfresh
+            const btn = document.querySelectorAll('.btn-rename-img')[index];
+            if(btn) {
+                btn.innerHTML = '✎';
+                btn.disabled = false;
+            }
         }
     }
 
