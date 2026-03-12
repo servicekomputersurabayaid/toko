@@ -166,6 +166,7 @@
     import { getFirestore, collection, addDoc, doc, getDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getBlob } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { startSessionTimer, stopSessionTimer } from "./security.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -185,6 +186,10 @@
     onAuthStateChanged(auth, (user) => {
         if (!user) {
             document.getElementById('loginModal').style.display = 'block';
+            stopSessionTimer(); // Matikan timer jika logout
+        } else {
+            // User is logged in, start the activity monitor
+            startSessionTimer(auth);
         }
     });
 

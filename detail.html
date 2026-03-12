@@ -150,6 +150,7 @@
         import { getFirestore, doc, getDoc, collection, getDocs, query, limit, where, addDoc, serverTimestamp, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import { startSessionTimer, stopSessionTimer } from "./security.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -616,10 +617,12 @@
                         });
                     }
                 }
+                startSessionTimer(auth); // Aktifkan pemantau aktivitas untuk user
             } else {
                 document.getElementById('review-form-container').style.display = 'none';
                 document.getElementById('login-to-review').style.display = 'block';
                 document.body.classList.remove('admin-mode');
+                stopSessionTimer(); // Matikan timer jika logout
             }
         });
 

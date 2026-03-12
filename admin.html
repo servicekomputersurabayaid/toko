@@ -346,6 +346,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, setDoc, getDoc, query, orderBy, limit, startAfter, getCountFromServer, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { startSessionTimer, stopSessionTimer } from "./security.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -361,28 +362,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
-
-// --- Fitur Keamanan: Auto Logout (Session Timeout) ---
-let inactivityTimer;
-const TIMEOUT_DURATION = 15 * 60 * 1000; // 15 Menit (dalam milidetik)
-
-function resetInactivityTimer() {
-    clearTimeout(inactivityTimer);
-    
-    // Hanya jalankan timer jika user sedang login
-    if (auth.currentUser) {
-        inactivityTimer = setTimeout(() => {
-            alert("Sesi Anda telah berakhir karena tidak aktif selama 15 menit. \nSistem akan logout otomatis demi keamanan data.");
-            logoutAdmin();
-        }, TIMEOUT_DURATION);
-    }
-}
-
-function setupActivityListeners() {
-    const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
-    events.forEach(event => document.addEventListener(event, resetInactivityTimer));
-    resetInactivityTimer(); // Mulai timer saat inisialisasi
-}
 
 // --- Custom Modal Helpers ---
 window.showCustomAlert = function(msg) {
@@ -478,11 +457,11 @@ onAuthStateChanged(auth, async (user) => {
         loadProductStats(); // Load statistik terpisah
         loadOrders(); // Load orders when logged in
         loadSettings();
-        setupActivityListeners(); // Aktifkan pemantau aktivitas
+        startSessionTimer(auth); // Aktifkan pemantau aktivitas (dari security.js)
     } else {
         document.getElementById('login-container').style.display = 'flex';
         document.getElementById('admin-content').style.display = 'none';
-        clearTimeout(inactivityTimer); // Matikan timer jika logout
+        stopSessionTimer(); // Matikan timer jika logout
     }
 });
 

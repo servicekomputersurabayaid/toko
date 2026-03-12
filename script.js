@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc, addDoc, runTransaction, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { startSessionTimer, stopSessionTimer } from "./security.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCK5nyqWkgD9WI0K9naso5KtHLFT9oNTXs",
@@ -1509,6 +1510,7 @@ onAuthStateChanged(auth, (user) => {
         userNameDisplay.style.display = 'block';
         userNameDisplay.innerText = user.email.split('@')[0]; // Tampilkan nama dari email
         checkAdminStatus(user);
+        startSessionTimer(auth); // Aktifkan pemantau aktivitas untuk user
     } else {
         // Reset flag saat logout agar nanti login bisa refresh lagi
         sessionStorage.removeItem('has_refreshed_login');
@@ -1521,6 +1523,7 @@ onAuthStateChanged(auth, (user) => {
         if(btnMobileAdmin) btnMobileAdmin.style.display = 'none';
         userNameDisplay.style.display = 'none';
         document.body.classList.remove('admin-mode');
+        stopSessionTimer(); // Matikan timer jika logout
     }
 });
 
