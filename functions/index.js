@@ -110,6 +110,7 @@ exports.renameStorageFile = onCall(async (request) => {
     return { success: true };
   } catch (error) {
     logger.error("Gagal rename file di Storage:", error);
-    throw new HttpsError('internal', 'Gagal merename file: ' + error.message);
+    // Kembalikan error sebagai data JSON agar tidak disensor oleh Firebase Client SDK
+    return { success: false, message: error.message };
   }
 });

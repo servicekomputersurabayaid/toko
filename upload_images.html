@@ -413,7 +413,11 @@
 
                     // 1. Panggil fungsi di server untuk rename langsung (tanpa download ke client)
                     const renameStorageFile = httpsCallable(functions, 'renameStorageFile');
-                    await renameStorageFile({ oldPath: oldFullPath, newPath: newFullPath });
+                    const response = await renameStorageFile({ oldPath: oldFullPath, newPath: newFullPath });
+
+                    if (response.data && response.data.success === false) {
+                        throw new Error(response.data.message || "Gagal memindahkan file di server.");
+                    }
 
                     // 2. Dapatkan URL Baru dari file yang sudah dipindah dari server
                     const newRef = ref(storage, newFullPath);
@@ -652,7 +656,11 @@
             try {
                 // Panggil Cloud Function untuk pindahkan (rename) file langsung di database server
                 const renameStorageFile = httpsCallable(functions, 'renameStorageFile');
-                await renameStorageFile({ oldPath: fullPath, newPath: newFullPath });
+                const response = await renameStorageFile({ oldPath: fullPath, newPath: newFullPath });
+                
+                if (response.data && response.data.success === false) {
+                    throw new Error(response.data.message || "Gagal memindahkan file di server.");
+                }
 
                 alert("Berhasil rename!");
                 loadGallery(); // Refresh galeri
