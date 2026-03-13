@@ -509,7 +509,14 @@ window.uploadCSV = async function(){
 
   try {
   const file = fileInput.files[0];
-  const text = await file.text();
+  const buffer = await file.arrayBuffer();
+  
+  // Coba decode dengan UTF-8 terlebih dahulu
+  let text = new TextDecoder('utf-8').decode(buffer);
+  // Jika terdapat karakter replacement (simbol rusak ), kemungkinan dari Excel (windows-1252)
+  if (text.includes('')) {
+      text = new TextDecoder('windows-1252').decode(buffer);
+  }
 
   const rows = text.split("\n").filter(r => r.trim());
 
