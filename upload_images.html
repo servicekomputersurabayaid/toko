@@ -118,6 +118,7 @@
         import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject, getBlob } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
         import { startSessionTimer, stopSessionTimer } from "./security.js";
 
         // Konfigurasi Firebase (Sama dengan script.js)
@@ -135,6 +136,7 @@
         const storage = getStorage(app);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const functions = getFunctions(app);
 
         // Deteksi status login agar Storage Rules mengizinkan upload
         onAuthStateChanged(auth, (user) => {
@@ -397,26 +399,25 @@
                 try {
                     statusDiv.innerHTML += `<div>⏳ Memproses: ${newNameRaw}...</div>`;
                     
-                    // 1. Download File Lama
-                    const oldRef = ref(storage, oldUrl);
-                    // Menggunakan getBlob untuk menghindari masalah CORS "failed to fetch"
-                    const blob = await getBlob(oldRef);
-
-                    // 2. Tentukan Nama Baru (SEO Friendly + Random Suffix)
-                    // Ambil ekstensi dari URL lama (sebelum query params)
                     const urlPath = oldUrl.split('?')[0];
+                    if (!urlPath.includes('/o/')) throw new Error("Format URL Storage tidak valid");
+                    
+                    // Ekstrak path storage asli (tanpa parameter & alt=media)
+                    const oldFullPath = decodeURIComponent(urlPath.split('/o/')[1]);
                     const ext = urlPath.includes('.') ? urlPath.split('.').pop() : 'jpg';
                     
+                    // Format Nama Baru
                     const cleanName = newNameRaw.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').toLowerCase();
                     const randomSuffix = Math.random().toString(36).substring(2, 8);
                     const newFullPath = `products/${cleanName}-${randomSuffix}.${ext}`;
 
-                    // 3. Upload ke Path Baru & Hapus Lama
+                    // 1. Panggil fungsi di server untuk rename langsung (tanpa download ke client)
+                    const renameStorageFile = httpsCallable(functions, 'renameStorageFile');
+                    await renameStorageFile({ oldPath: oldFullPath, newPath: newFullPath });
+
+                    // 2. Dapatkan URL Baru dari file yang sudah dipindah dari server
                     const newRef = ref(storage, newFullPath);
-                    const snapshot = await uploadBytes(newRef, blob);
-                    const newDownloadUrl = await getDownloadURL(snapshot.ref);
-                    
-                    await deleteObject(oldRef);
+                    const newDownloadUrl = await getDownloadURL(newRef);
 
                     statusDiv.innerHTML += `<div class="success">✅ Berhasil: ${cleanName}-${randomSuffix}.${ext}</div>`;
                     newUrls.push(newDownloadUrl);
@@ -649,21 +650,9 @@
             statusDiv.innerHTML = `<div class="status-item">⏳ Memproses rename...</div>`;
 
             try {
-                // 1. Dapatkan URL & Blob dari file lama
-                const oldRef = ref(storage, fullPath);
-                // Menggunakan getBlob untuk menghindari masalah CORS "failed to fetch"
-                const blob = await getBlob(oldRef);
-
-                // 2. Upload ke path baru
-                const newRef = ref(storage, newFullPath);
-                await uploadBytes(newRef, blob);
-
-                // 3. Hapus file lama (Cleanup)
-                try {
-                    await deleteObject(oldRef);
-                } catch (delErr) {
-                    console.warn("Gagal menghapus file lama:", delErr);
-                }
+                // Panggil Cloud Function untuk pindahkan (rename) file langsung di database server
+                const renameStorageFile = httpsCallable(functions, 'renameStorageFile');
+                await renameStorageFile({ oldPath: fullPath, newPath: newFullPath });
 
                 alert("Berhasil rename!");
                 loadGallery(); // Refresh galeri

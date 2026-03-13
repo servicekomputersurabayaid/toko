@@ -7,7 +7,7 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 
@@ -87,5 +87,29 @@ exports.sitemap = onRequest(async (req, res) => {
   } catch (error) {
     logger.error("Sitemap Error", error);
     res.status(500).end();
+  }
+});
+
+// Fungsi untuk memindahkan (rename) file langsung di server tanpa download
+exports.renameStorageFile = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Akses ditolak. Anda belum login.');
+  }
+
+  const { oldPath, newPath } = request.data;
+  if (!oldPath || !newPath) {
+    throw new HttpsError('invalid-argument', 'Path asal dan tujuan wajib diisi.');
+  }
+
+  try {
+    const bucket = admin.storage().bucket("servicekomputersurabaya.firebasestorage.app");
+    const file = bucket.file(oldPath);
+    
+    // Perintah move() memindahkan file secara instan di sisi server (0 bandwidth)
+    await file.move(newPath);
+    return { success: true };
+  } catch (error) {
+    logger.error("Gagal rename file di Storage:", error);
+    throw new HttpsError('internal', 'Gagal merename file: ' + error.message);
   }
 });
