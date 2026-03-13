@@ -203,13 +203,16 @@ function renderFeaturedProducts() {
         }
 
         const hasVariants = product.variants && product.variants.length > 0;
+        
+        const cleanShortDesc = product.shortDesc ? product.shortDesc.replace(/<[^>]*>?/gm, '').replace(/"/g, '&quot;').trim() : '';
+        const altText = cleanShortDesc ? `${product.name} - ${cleanShortDesc}` : product.name;
 
         html += `
         <div class="product-card">
             ${discountBadge}
             <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
             <div onclick="window.location.href='detail.html?id=${product.id}&slug=${encodeURIComponent(product.name.trim().replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">
-                <img src="${product.image}" alt="${product.name}" class="product-img">
+                <img src="${product.image}" alt="${altText}" class="product-img">
             </div>
             <div class="product-info">
                 <h3 class="product-title" onclick="window.location.href='detail.html?id=${product.id}&slug=${encodeURIComponent(product.name.trim().replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">${product.name}</h3>
@@ -415,13 +418,16 @@ function renderProducts(append = false) {
 
         // Cek varian untuk tombol
         const hasVariants = product.variants && product.variants.length > 0;
+        
+        const cleanShortDesc = product.shortDesc ? product.shortDesc.replace(/<[^>]*>?/gm, '').replace(/"/g, '&quot;').trim() : '';
+        const altText = cleanShortDesc ? `${product.name} - ${cleanShortDesc}` : product.name;
 
         return `
         <div class="product-card">
             ${discountBadge}
             <button class="btn-wishlist ${heartClass}" data-id="${product.id}"><span class="material-icons">favorite</span></button>
             <div onclick="window.location.href='detail.html?id=${product.id}&slug=${encodeURIComponent(product.name.trim().replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">
-                <img src="${product.image}" alt="${product.name}" class="product-img">
+                <img src="${product.image}" alt="${altText}" class="product-img">
             </div>
             <div class="product-info">
                 <h3 class="product-title" onclick="window.location.href='detail.html?id=${product.id}&slug=${encodeURIComponent(product.name.trim().replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">${product.name}</h3>

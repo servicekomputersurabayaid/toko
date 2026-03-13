@@ -282,6 +282,7 @@
                         weight: parseInt(data.berat || data.weight || 1000),
                         images: data.images || [data.image_url], // Ambil array images atau fallback ke single image
                         description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi.",
+                        shortDesc: data.deskripsi_singkat || "",
                         category: data.kategori || "Umum",
                         variants: data.variants || data.varian || [] // Ambil data varian
                     };
@@ -290,8 +291,13 @@
                     updateSEO(currentProduct);
                     updateBreadcrumb(currentProduct);
 
+                    // Siapkan Teks Alt Gambar SEO (Judul + Deskripsi Singkat)
+                    const cleanShortDesc = currentProduct.shortDesc.replace(/<[^>]*>?/gm, '').replace(/"/g, '&quot;').trim();
+                    const altText = cleanShortDesc ? `${currentProduct.name} - ${cleanShortDesc}` : currentProduct.name;
+
                     // Render ke HTML
                     document.getElementById('d-image').src = currentProduct.image;
+                    document.getElementById('d-image').alt = altText;
                     document.getElementById('d-title').innerText = currentProduct.name;
                     
                     // Render Harga & Diskon
@@ -313,7 +319,7 @@
                     const thumbContainer = document.getElementById('d-thumbnails');
                     if (currentProduct.images.length > 1) {
                         thumbContainer.innerHTML = currentProduct.images.map((img, index) => `
-                            <img src="${img}" class="thumbnail ${index === 0 ? 'active' : ''}" onclick="changeMainImage(this, '${img}')">
+                            <img src="${img}" alt="${altText} - Gambar ${index + 1}" class="thumbnail ${index === 0 ? 'active' : ''}" onclick="changeMainImage(this, '${img}')">
                         `).join('');
                     } else {
                         thumbContainer.innerHTML = ''; // Kosongkan jika cuma 1 gambar
@@ -414,11 +420,14 @@
                     const price = parseInt(p.harga || p.price || 0);
                     const image = p.image_url || "https://via.placeholder.com/150";
                     const weight = parseInt(p.berat || p.weight || 1000);
+                    
+                    const shortDesc = p.deskripsi_singkat ? p.deskripsi_singkat.replace(/<[^>]*>?/gm, '').replace(/"/g, '&quot;').trim() : "";
+                    const altTextRelated = shortDesc ? `${name} - ${shortDesc}` : name;
 
                     html += `
                         <div class="product-card">
                             <div onclick="window.location.href='detail.html?id=${doc.id}&slug=${encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">
-                                <img src="${image}" alt="${name}" class="product-img">
+                                <img src="${image}" alt="${altTextRelated}" class="product-img">
                             </div>
                             <div class="product-info">
                                 <h3 class="product-title" onclick="window.location.href='detail.html?id=${doc.id}&slug=${encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">${name}</h3>
