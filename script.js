@@ -114,20 +114,54 @@ async function loadProducts() {
         // Render Featured Products
         renderFeaturedProducts();
         
-        // Cek apakah ada pencarian dari URL (misal redirect dari detail.html)
+        // Cek parameter dari URL (Share Filter)
         const params = new URLSearchParams(window.location.search);
-        const query = params.get('q');
-        const category = params.get('category');
-        const searchInput = document.getElementById('search-input');
-
-        if (query && searchInput) {
-            searchInput.value = query;
-            handleSearch(query);
-        } else if (category) {
-            filterCategory(category);
-        } else {
-            applyFilters(); // Ganti renderProducts dengan applyFilters agar slider aktif
+        
+        const qParam = params.get('q');
+        if (qParam && document.getElementById('search-input')) {
+            document.getElementById('search-input').value = qParam;
         }
+
+        const catParam = params.get('category');
+        if (catParam && document.getElementById('category-select')) {
+            document.getElementById('category-select').value = catParam;
+            currentActiveCategory = catParam;
+            
+            // Render sub-kategori berdasarkan kategori yang diambil dari URL
+            const subCatContainer = document.getElementById('subcategory-list');
+            const filteredForCat = products.filter(p => p.category === catParam);
+            const subCategories = [...new Set(filteredForCat.map(p => p.subCategory).filter(s => s))].sort();
+            
+            const subParam = params.get('sub');
+            if (subCategories.length > 0) {
+                let subHtml = `<a href="#" onclick="filterSubCategory('all', this); return false;" class="cat-link ${(!subParam || subParam==='all') ? 'active' : ''}" style="font-size:0.85rem; padding:5px 12px;">Semua ${catParam}</a>`;
+                subCategories.forEach(sub => {
+                    subHtml += `<a href="#" onclick="filterSubCategory('${sub}', this); return false;" class="cat-link ${subParam === sub ? 'active' : ''}" style="font-size:0.85rem; padding:5px 12px;">${sub}</a>`;
+                });
+                subCatContainer.innerHTML = subHtml;
+                subCatContainer.style.display = 'flex';
+                subCatContainer.dataset.activeSub = subParam || 'all';
+            } else {
+                subCatContainer.style.display = 'none';
+            }
+        }
+
+        const sortParam = params.get('sort');
+        if (sortParam && document.getElementById('sort-select')) {
+            document.getElementById('sort-select').value = sortParam;
+        }
+
+        const minParam = params.get('min');
+        if (minParam && document.getElementById('min-price')) {
+            document.getElementById('min-price').value = parseInt(minParam).toLocaleString('id-ID');
+        }
+
+        const maxParam = params.get('max');
+        if (maxParam && document.getElementById('max-price')) {
+            document.getElementById('max-price').value = parseInt(maxParam).toLocaleString('id-ID');
+        }
+
+        applyFilters(); // Terapkan semua filter sekaligus
 
     } catch (error) {
         console.error("Error loading products:", error);
@@ -242,28 +276,6 @@ window.filterCategory = function(category) {
     const select = document.getElementById('category-select');
     if(select && select.value !== category) select.value = category;
     
-    // Update Tombol Share Kategori
-    const shareBtn = document.getElementById('btn-share-category');
-    if (shareBtn) {
-        if (category !== 'all') {
-            shareBtn.style.display = 'inline-flex';
-            shareBtn.onclick = () => {
-                const shareUrl = `${window.location.origin}${window.location.pathname}?category=${encodeURIComponent(category)}`;
-                const baseText = `Lihat produk kategori ${category} di Service Komputer Surabaya`;
-                
-                if (navigator.share) {
-                    // Browser otomatis menggabungkan text + url
-                    navigator.share({ title: `Kategori ${category}`, text: baseText, url: shareUrl }).catch(console.error);
-                } else {
-                    // Fallback ke WhatsApp (gabung manual)
-                    const waText = `${baseText}: ${shareUrl}`;
-                    window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, '_blank');
-                }
-            };
-        } else {
-            shareBtn.style.display = 'none';
-        }
-    }
 
     const subCatContainer = document.getElementById('subcategory-list');
 
@@ -528,6 +540,48 @@ if (maxPriceInput) {
     });
     maxPriceInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') applyFilters();
+    });
+}
+
+// Event Listener untuk Tombol Share Universal (Filter Lengkap)
+const btnShareFilter = document.getElementById('btn-share-filter');
+if (btnShareFilter) {
+    btnShareFilter.addEventListener('click', () => {
+        const params = new URLSearchParams();
+        
+        const q = document.getElementById('search-input')?.value.trim();
+        if (q) params.set('q', q);
+        
+        if (currentActiveCategory && currentActiveCategory !== 'all') {
+            params.set('category', currentActiveCategory);
+        }
+        
+        const activeSub = document.getElementById('subcategory-list')?.dataset.activeSub;
+        if (activeSub && activeSub !== 'all') {
+            params.set('sub', activeSub);
+        }
+        
+        const sort = document.getElementById('sort-select')?.value;
+        if (sort && sort !== 'default') {
+            params.set('sort', sort);
+        }
+        
+        const minVal = document.getElementById('min-price')?.value.replace(/\D/g, '');
+        if (minVal) params.set('min', minVal);
+        
+        const maxVal = document.getElementById('max-price')?.value.replace(/\D/g, '');
+        if (maxVal) params.set('max', maxVal);
+        
+        const queryString = params.toString();
+        const shareUrl = `${window.location.origin}${window.location.pathname}${queryString ? '?' + queryString : ''}`;
+        const shareText = "Cek pilihan produk menarik ini di Service Komputer Surabaya!";
+
+        if (navigator.share) {
+            navigator.share({ title: 'Hasil Pencarian Produk', text: shareText, url: shareUrl }).catch(console.error);
+        } else {
+            const waText = `${shareText}\n\n${shareUrl}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, '_blank');
+        }
     });
 }
 

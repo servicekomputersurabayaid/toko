@@ -72,16 +72,24 @@
         <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
 
         <!-- SECTION 3: RENAME VIA CSV -->
-        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">3. Rename Gambar Masal via CSV</h3>
-        <p>Gunakan ini jika gambar terlalu banyak untuk dimuat di galeri. Upload CSV dengan format: <strong>URL_LAMA, NAMA_BARU</strong> (tanpa header).</p>
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">3. Rename Gambar Masal via Paste / CSV</h3>
+        <p>Gunakan ini jika gambar terlalu banyak untuk dimuat di galeri. Paste langsung atau Upload CSV dengan format: <strong>URL_LAMA, NAMA_BARU</strong> (tanpa header).</p>
         <p style="font-size: 0.8rem; color: #666;">
-            Contoh isi CSV:<br>
+            Contoh:<br>
             <code>https://firebasestorage.../img1.jpg, laptop-asus-rog</code><br>
             <code>https://firebasestorage.../img2.jpg, mouse-logitech</code>
         </p>
-        <input type="file" id="csvRenameInput" accept=".csv">
-        <button onclick="processCsvRename()" class="btn" style="background-color: #8e44ad; margin-top: 10px; color: white;">Mulai Rename Masal</button>
+        <textarea id="csvRenamePaste" placeholder="Paste data (URL_LAMA, NAMA_BARU) di sini..." style="height: 100px; margin-bottom: 10px;"></textarea>
+        <div style="margin-bottom: 10px;">
+            <span style="font-size: 0.9rem; color: #555;">Atau upload file: </span>
+            <input type="file" id="csvRenameInput" accept=".csv" style="display: inline-block;">
+        </div>
+        <button onclick="processCsvRename()" class="btn" style="background-color: #8e44ad; color: white;">Mulai Rename Masal</button>
         <div id="renameStatus" style="margin-top: 10px; max-height: 200px; overflow-y: auto; background: #fafafa; padding: 10px; border: 1px solid #eee;"></div>
+
+        <h4 style="margin-top: 20px; color: #2c3e50;">Hasil URL Baru:</h4>
+        <textarea id="renameUrlOutput" readonly placeholder="URL gambar baru akan muncul di sini..."></textarea>
+        <button onclick="copyRenameUrls()" class="btn btn-copy">Salin URL Baru</button>
 
         <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
 
@@ -351,17 +359,27 @@
 
         window.processCsvRename = async function() {
             const fileInput = document.getElementById('csvRenameInput');
+            const pasteInput = document.getElementById('csvRenamePaste');
             const statusDiv = document.getElementById('renameStatus');
+            const urlOutput = document.getElementById('renameUrlOutput');
             
             if (!auth.currentUser) { alert("Silakan login terlebih dahulu!"); return; }
-            if (fileInput.files.length === 0) { alert("Pilih file CSV terlebih dahulu!"); return; }
 
-            const file = fileInput.files[0];
-            const text = await file.text();
+            let text = "";
+            if (pasteInput.value.trim() !== "") {
+                text = pasteInput.value.trim();
+            } else if (fileInput.files.length > 0) {
+                text = await fileInput.files[0].text();
+            } else {
+                alert("Paste data CSV atau pilih file terlebih dahulu!"); return;
+            }
+
             const rows = text.split('\n');
 
             statusDiv.innerHTML = "<div>Memulai proses rename...</div>";
+            urlOutput.value = "";
             let successCount = 0;
+            let newUrls = [];
 
             for (let i = 0; i < rows.length; i++) {
                 const row = rows[i].trim();
@@ -395,17 +413,37 @@
 
                     // 3. Upload ke Path Baru & Hapus Lama
                     const newRef = ref(storage, newFullPath);
-                    await uploadBytes(newRef, blob);
+                    const snapshot = await uploadBytes(newRef, blob);
+                    const newDownloadUrl = await getDownloadURL(snapshot.ref);
+                    
                     await deleteObject(oldRef);
 
                     statusDiv.innerHTML += `<div class="success">✅ Berhasil: ${cleanName}-${randomSuffix}.${ext}</div>`;
+                    newUrls.push(newDownloadUrl);
                     successCount++;
                 } catch (e) {
                     console.error(e);
                     statusDiv.innerHTML += `<div class="error">❌ Gagal (${newNameRaw}): ${e.message}</div>`;
                 }
             }
+            
+            if (newUrls.length > 0) {
+                urlOutput.value = newUrls.join(" | ");
+            }
             statusDiv.innerHTML += `<div>--- Selesai (${successCount} file) ---</div>`;
+        }
+
+        window.copyRenameUrls = function() {
+            const copyText = document.getElementById("renameUrlOutput");
+            if (!copyText.value) {
+                alert("Belum ada URL yang bisa disalin.");
+                return;
+            }
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                alert("URL baru berhasil disalin!");
+            });
         }
 
         window.loadGallery = async function() {
