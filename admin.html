@@ -189,7 +189,7 @@
     <option value="draft">Draft</option>
     <option value="inactive">Nonaktif</option>
 </select>
-<select id="exportCategoryFilter" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-left: 5px;">
+<select id="exportCategoryFilter" onchange="handleExportCategoryChange()" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-left: 5px;">
     <option value="all">Semua Kategori</option>
 </select>
 <select id="exportSubCategoryFilter" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-left: 5px;">
@@ -247,7 +247,7 @@
         <option value="draft">Draft</option>
         <option value="inactive">Nonaktif</option>
     </select>
-    <select id="filterCategory" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; flex: 1; min-width: 150px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
+<select id="filterCategory" onchange="handleFilterCategoryChange()" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; flex: 1; min-width: 150px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
         <option value="">Semua Kategori</option>
     </select>
     <select id="filterSubCategory" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; flex: 1; min-width: 150px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
@@ -487,11 +487,18 @@ window.loadCategories = async function() {
         const querySnapshot = await getDocs(collection(db, "products"));
         const categories = new Set();
         const subCategories = new Set();
+        window.categoryToSubCategoryMap = {}; // Reset pemetaan
         
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            if (data.kategori) categories.add(data.kategori);
-            if (data.sub_kategori) subCategories.add(data.sub_kategori);
+            if (data.kategori) {
+                categories.add(data.kategori);
+                if (!window.categoryToSubCategoryMap[data.kategori]) window.categoryToSubCategoryMap[data.kategori] = new Set();
+                if (data.sub_kategori) {
+                    window.categoryToSubCategoryMap[data.kategori].add(data.sub_kategori);
+                    subCategories.add(data.sub_kategori);
+                }
+            }
         });
 
         const sortedCategories = Array.from(categories).sort();
@@ -545,6 +552,51 @@ window.loadCategories = async function() {
 
     } catch (e) {
         console.error("Gagal load categories:", e);
+    }
+}
+
+window.handleFilterCategoryChange = function() {
+    const cat = document.getElementById('filterCategory').value;
+    const subCatSelect = document.getElementById('filterSubCategory');
+    const currentSub = subCatSelect.value;
+
+    subCatSelect.innerHTML = '<option value="">Semua Sub Kategori</option>';
+
+    if (cat && window.categoryToSubCategoryMap[cat]) {
+        Array.from(window.categoryToSubCategoryMap[cat]).sort().forEach(s => subCatSelect.innerHTML += `<option value="${s}">${s}</option>`);
+    } else if (!cat) {
+        const allSubs = new Set();
+        Object.values(window.categoryToSubCategoryMap).forEach(set => set.forEach(s => allSubs.add(s)));
+        Array.from(allSubs).sort().forEach(s => subCatSelect.innerHTML += `<option value="${s}">${s}</option>`);
+    }
+
+    if (Array.from(subCatSelect.options).some(opt => opt.value === currentSub)) {
+        subCatSelect.value = currentSub;
+    } else {
+        subCatSelect.value = "";
+    }
+    loadProducts('refresh');
+}
+
+window.handleExportCategoryChange = function() {
+    const cat = document.getElementById('exportCategoryFilter').value;
+    const subCatSelect = document.getElementById('exportSubCategoryFilter');
+    const currentSub = subCatSelect.value;
+
+    subCatSelect.innerHTML = '<option value="all">Semua Sub Kategori</option>';
+
+    if (cat && cat !== 'all' && window.categoryToSubCategoryMap[cat]) {
+        Array.from(window.categoryToSubCategoryMap[cat]).sort().forEach(s => subCatSelect.innerHTML += `<option value="${s}">${s}</option>`);
+    } else if (cat === 'all') {
+        const allSubs = new Set();
+        Object.values(window.categoryToSubCategoryMap).forEach(set => set.forEach(s => allSubs.add(s)));
+        Array.from(allSubs).sort().forEach(s => subCatSelect.innerHTML += `<option value="${s}">${s}</option>`);
+    }
+
+    if (Array.from(subCatSelect.options).some(opt => opt.value === currentSub)) {
+        subCatSelect.value = currentSub;
+    } else {
+        subCatSelect.value = "all";
     }
 }
 
@@ -1346,8 +1398,15 @@ async function loadProducts(mode = 'refresh') {
     });
 
   } catch (e) {
-    console.error(e);
-    if (mode === 'refresh') tbody.innerHTML = `<tr><td colspan='9' style='color:red;'>Gagal memuat data: ${e.message}</td></tr>`;
+    console.error("Gagal memuat data produk:", e);
+    if (mode === 'refresh') {
+        if (e.message && e.message.includes("requires an index")) {
+            const linkMatch = e.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+            tbody.innerHTML = `<tr><td colspan='9' style='color:#721c24; background-color:#f8d7da; text-align:center; padding: 20px;'><strong>Sistem membutuhkan Index Database untuk filter ini!</strong><br><br><a href="${linkMatch ? linkMatch[0] : '#'}" target="_blank" style="color: #0056b3; text-decoration: underline; font-weight:bold;">TUTORIAL KLIK DISINI: Buka Link Ini untuk Membuat Index Secara Otomatis</a><br><small>(Setelah diklik, tunggu proses pembuatan index sekitar 2-3 menit di Firebase, lalu Refresh halaman ini).</small></td></tr>`;
+        } else {
+            tbody.innerHTML = `<tr><td colspan='9' style='color:red;'>Gagal memuat data: ${e.message}</td></tr>`;
+        }
+    }
   } finally {
     isLoading = false;
     if(loadingIndicator) loadingIndicator.style.display = 'none';
