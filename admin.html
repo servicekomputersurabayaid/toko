@@ -467,11 +467,14 @@ onAuthStateChanged(auth, async (user) => {
 
         document.getElementById('login-container').style.display = 'none';
         document.getElementById('admin-content').style.display = 'block';
-        loadCategories(); // Ambil seluruh kategori saat admin berhasil login
-        loadProducts();
+        
+        // Panggil pengambilan data yang ringan terlebih dahulu agar UI tidak terblokir
         loadProductStats(); // Load statistik terpisah
         loadOrders(); // Load orders when logged in
         loadSettings();
+        
+        await loadProducts(); // Tunggu daftar produk dirender & indikator loading disembunyikan
+        loadCategories(); // Ambil seluruh data kategori di background (bisa lambat jika data sangat banyak)
         startSessionTimer(auth); // Aktifkan pemantau aktivitas (dari security.js)
     } else {
         document.getElementById('login-container').style.display = 'flex';
@@ -1315,6 +1318,11 @@ async function loadProducts(mode = 'refresh') {
         q = query(productsRef, ...queryConstraints, limit(itemsPerPage));
     } else {
         // mode === 'next'
+        if (!lastVisibleDoc) {
+            isLoading = false;
+            if(loadingIndicator) loadingIndicator.style.display = 'none';
+            return;
+        }
         q = query(productsRef, ...queryConstraints, startAfter(lastVisibleDoc), limit(itemsPerPage));
     }
 
@@ -1412,6 +1420,7 @@ async function loadProducts(mode = 'refresh') {
     if(loadingIndicator) loadingIndicator.style.display = 'none';
   }
 }
+window.loadProducts = loadProducts; // Expose ke global window agar trigger onchange di elemen HTML bisa berjalan
 
 // Fungsi terpisah untuk menghitung statistik (agar tidak berat saat pagination)
 window.loadProductStats = async function() {
