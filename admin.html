@@ -237,17 +237,20 @@
   <span style="padding: 8px 12px; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 4px;">Nonaktif: <strong id="cnt-inactive">...</strong></span>
 </div>
 
-<div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
-    <select id="filterStatus" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
+<div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+    <select id="filterStatus" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; flex: 1; min-width: 150px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
         <option value="">Semua Status</option>
         <option value="active">Aktif</option>
         <option value="draft">Draft</option>
         <option value="inactive">Nonaktif</option>
     </select>
-    <select id="filterCategory" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
+    <select id="filterCategory" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; flex: 1; min-width: 150px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
         <option value="">Semua Kategori</option>
     </select>
-    <input type="text" id="searchInput" onkeyup="handleSearchInput(event)" placeholder="Cari nama produk (tekan Enter)..." class="search-admin" style="margin-bottom: 0; flex: 1; padding: 12px; font-size: 1rem; border-radius: 6px;">
+    <form onsubmit="event.preventDefault(); loadProducts('refresh');" style="margin-bottom: 0; flex: 2; display: flex; position: relative; min-width: 250px;">
+        <input type="text" id="searchInput" oninput="toggleClearSearch()" placeholder="Cari nama produk (tekan Enter)..." class="search-admin" style="margin-bottom: 0; width: 100%; padding: 12px; padding-right: 40px; font-size: 1rem; border-radius: 6px; box-sizing: border-box;">
+        <span id="clearSearch" onclick="clearSearchInput()" style="display: none; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 1.5rem; color: #888; font-weight: bold; line-height: 1;">&times;</span>
+    </form>
 </div>
 
 <datalist id="categoryListAdmin"></datalist>
@@ -1031,11 +1034,21 @@ let isLoading = false;
 let isLastPage = false;
 const itemsPerPage = 20;
 
-window.handleSearchInput = function(event) {
-    // Trigger search on Enter key
-    if (event.key === "Enter") {
-        loadProducts('refresh');
+window.toggleClearSearch = function() {
+    const input = document.getElementById("searchInput");
+    const clearBtn = document.getElementById("clearSearch");
+    if (input.value.length > 0) {
+        clearBtn.style.display = "block";
+    } else {
+        clearBtn.style.display = "none";
     }
+}
+
+window.clearSearchInput = function() {
+    const input = document.getElementById("searchInput");
+    input.value = "";
+    toggleClearSearch();
+    loadProducts('refresh');
 }
 
 // Infinite Scroll Listener

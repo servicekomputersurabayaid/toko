@@ -43,7 +43,10 @@
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h2 style="margin:0;">Input Produk Baru</h2>
-        <a href="admin.html" class="btn-back">Kembali ke Admin</a>
+        <div style="display: flex; gap: 10px;">
+            <a href="#" id="btnDuplicate" class="btn-back" style="background-color: #f39c12; display: none;">Duplikat Produk</a>
+            <a href="admin.html" class="btn-back">Kembali ke Admin</a>
+        </div>
     </div>
     
     <form id="productForm" onsubmit="event.preventDefault(); saveProduct();">
@@ -496,6 +499,12 @@
         } else {
             document.querySelector('h2').innerText = "Edit Produk";
             document.getElementById('btnSave').innerText = "Update Produk";
+            
+            const btnDuplicate = document.getElementById('btnDuplicate');
+            if (btnDuplicate) {
+                btnDuplicate.style.display = 'inline-block';
+                btnDuplicate.href = `input_produk.html?id=${editId}&duplicate=true`;
+            }
         }
         loadProductData(editId);
     }
