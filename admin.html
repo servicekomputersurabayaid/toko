@@ -192,6 +192,9 @@
 <select id="exportCategoryFilter" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-left: 5px;">
     <option value="all">Semua Kategori</option>
 </select>
+<select id="exportSubCategoryFilter" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-left: 5px;">
+    <option value="all">Semua Sub Kategori</option>
+</select>
 <button onclick="exportCSV()">Download CSV (Export)</button>
 <button onclick="deleteAllProducts()" style="background-color: #d32f2f; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Hapus Semua Data</button>
 <button onclick="restoreData()" style="background-color: #2196F3; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Restore Data Terakhir</button>
@@ -247,6 +250,13 @@
     <select id="filterCategory" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; flex: 1; min-width: 150px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
         <option value="">Semua Kategori</option>
     </select>
+    <select id="filterSubCategory" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; flex: 1; min-width: 150px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
+        <option value="">Semua Sub Kategori</option>
+    </select>
+    <select id="filterStock" onchange="loadProducts('refresh')" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; flex: 1; min-width: 150px; margin-bottom: 0; cursor: pointer; font-size: 1rem; background-color: white;">
+        <option value="">Semua Stok</option>
+        <option value="habis">Stok Habis (0)</option>
+    </select>
     <form onsubmit="event.preventDefault(); loadProducts('refresh');" style="margin-bottom: 0; flex: 2; display: flex; position: relative; min-width: 250px;">
         <input type="text" id="searchInput" oninput="toggleClearSearch()" placeholder="Cari nama produk (tekan Enter)..." class="search-admin" style="margin-bottom: 0; width: 100%; padding: 12px; padding-right: 40px; font-size: 1rem; border-radius: 6px; box-sizing: border-box;">
         <span id="clearSearch" onclick="clearSearchInput()" style="display: none; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 1.5rem; color: #888; font-weight: bold; line-height: 1;">&times;</span>
@@ -254,6 +264,7 @@
 </div>
 
 <datalist id="categoryListAdmin"></datalist>
+<datalist id="subCategoryListAdmin"></datalist>
 <table id="productTable">
   <thead>
     <tr>
@@ -456,6 +467,7 @@ onAuthStateChanged(auth, async (user) => {
 
         document.getElementById('login-container').style.display = 'none';
         document.getElementById('admin-content').style.display = 'block';
+        loadCategories(); // Ambil seluruh kategori saat admin berhasil login
         loadProducts();
         loadProductStats(); // Load statistik terpisah
         loadOrders(); // Load orders when logged in
@@ -469,6 +481,72 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // --- Settings Logic ---
+
+window.loadCategories = async function() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const categories = new Set();
+        const subCategories = new Set();
+        
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.kategori) categories.add(data.kategori);
+            if (data.sub_kategori) subCategories.add(data.sub_kategori);
+        });
+
+        const sortedCategories = Array.from(categories).sort();
+        const sortedSubCategories = Array.from(subCategories).sort();
+
+        // Update Export Category Filter
+        const exportCatSelect = document.getElementById('exportCategoryFilter');
+        if(exportCatSelect) {
+            const currentVal = exportCatSelect.value;
+            let catOptions = `<option value="all">Semua Kategori</option>`;
+            sortedCategories.forEach(c => catOptions += `<option value="${c}">${c}</option>`);
+            exportCatSelect.innerHTML = catOptions;
+            exportCatSelect.value = currentVal;
+        }
+        
+        // Update Export Sub Category Filter
+        const exportSubCatSelect = document.getElementById('exportSubCategoryFilter');
+        if(exportSubCatSelect) {
+            const currentVal = exportSubCatSelect.value;
+            let subCatOptions = `<option value="all">Semua Sub Kategori</option>`;
+            sortedSubCategories.forEach(c => subCatOptions += `<option value="${c}">${c}</option>`);
+            exportSubCatSelect.innerHTML = subCatOptions;
+            exportSubCatSelect.value = currentVal;
+        }
+        
+        // Update Filter Category
+        const filterCatSelect = document.getElementById('filterCategory');
+        if(filterCatSelect) {
+            const currentVal = filterCatSelect.value;
+            let catOptions = `<option value="">Semua Kategori</option>`;
+            sortedCategories.forEach(c => catOptions += `<option value="${c}">${c}</option>`);
+            filterCatSelect.innerHTML = catOptions;
+            filterCatSelect.value = currentVal;
+        }
+
+        // Update Filter Sub Category
+        const filterSubCatSelect = document.getElementById('filterSubCategory');
+        if(filterSubCatSelect) {
+            const currentVal = filterSubCatSelect.value;
+            let subCatOptions = `<option value="">Semua Sub Kategori</option>`;
+            sortedSubCategories.forEach(c => subCatOptions += `<option value="${c}">${c}</option>`);
+            filterSubCatSelect.innerHTML = subCatOptions;
+            filterSubCatSelect.value = currentVal;
+        }
+
+        // Update Datalist
+        const datalist = document.getElementById('categoryListAdmin');
+        if(datalist) datalist.innerHTML = sortedCategories.map(c => `<option value="${c}">`).join('');
+        const subDatalist = document.getElementById('subCategoryListAdmin');
+        if(subDatalist) subDatalist.innerHTML = sortedSubCategories.map(c => `<option value="${c}">`).join('');
+
+    } catch (e) {
+        console.error("Gagal load categories:", e);
+    }
+}
 
 window.loadSettings = async function() {
     try {
@@ -643,6 +721,7 @@ window.uploadCSV = async function(){
   }
 
   status.innerHTML = `Selesai! ${success} produk baru, ${updated} produk diupdate.`;
+  loadCategories(); // Refresh daftar kategori jika ada kategori baru dari CSV
   loadProducts(); // Refresh list after upload
   } catch (error) {
     console.error(error);
@@ -654,7 +733,8 @@ window.exportCSV = async function() {
   const status = document.getElementById("status");
   const filterStatus = document.getElementById("exportStatusFilter").value;
   const filterCategory = document.getElementById("exportCategoryFilter").value;
-  status.innerHTML = `Sedang mengekspor data (${filterStatus} - ${filterCategory})...`;
+  const filterSubCategory = document.getElementById("exportSubCategoryFilter") ? document.getElementById("exportSubCategoryFilter").value : "all";
+  status.innerHTML = `Sedang mengekspor data (${filterStatus} - ${filterCategory} - ${filterSubCategory})...`;
 
   try {
     const querySnapshot = await getDocs(collection(db, "products"));
@@ -680,6 +760,10 @@ window.exportCSV = async function() {
       }
       
       if (filterCategory !== 'all' && data.kategori !== filterCategory) {
+          return;
+      }
+
+      if (filterSubCategory !== 'all' && data.sub_kategori !== filterSubCategory) {
           return;
       }
 
@@ -787,6 +871,7 @@ window.deleteAllProducts = async function() {
     await Promise.all(deletePromises);
 
     status.innerHTML = "Semua data berhasil dihapus.";
+    loadCategories(); // Reset kategori setelah dihapus
     loadProducts();
   } catch (error) {
     console.error(error);
@@ -816,6 +901,7 @@ window.restoreData = async function() {
         status.innerHTML = `Mengembalikan produk ke-${count} dari ${data.length}`;
     }
     status.innerHTML = "Restore selesai! Total: " + count;
+    loadCategories(); // Refresh kategori setelah restore
     loadProducts();
   } catch(e) {
     console.error(e);
@@ -1096,6 +1182,8 @@ window.updateInline = async function(id, field, value, element) {
         loadProductStats();
     } else if (field === 'kategori') {
         updateData.kategori = value;
+    } else if (field === 'sub_kategori') {
+        updateData.sub_kategori = value;
     }
 
     try {
@@ -1143,6 +1231,8 @@ async function loadProducts(mode = 'refresh') {
     const searchInput = document.getElementById("searchInput").value.trim().toLowerCase();
     const statusFilter = document.getElementById("filterStatus").value;
     const categoryFilter = document.getElementById("filterCategory").value;
+    const subCategoryFilter = document.getElementById("filterSubCategory") ? document.getElementById("filterSubCategory").value : "";
+    const stockFilter = document.getElementById("filterStock") ? document.getElementById("filterStock").value : "";
 
     // --- Membangun Query Dinamis ---
     let queryConstraints = [];
@@ -1151,6 +1241,12 @@ async function loadProducts(mode = 'refresh') {
     }
     if (categoryFilter) {
         queryConstraints.push(where("kategori", "==", categoryFilter));
+    }
+    if (subCategoryFilter) {
+        queryConstraints.push(where("sub_kategori", "==", subCategoryFilter));
+    }
+    if (stockFilter === 'habis') {
+        queryConstraints.push(where("stok", "==", 0));
     }
     if (searchInput) {
         queryConstraints.push(where("judul_lowercase", ">=", searchInput));
@@ -1190,38 +1286,6 @@ async function loadProducts(mode = 'refresh') {
     // Simpan dokumen terakhir untuk cursor next
     lastVisibleDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
 
-    // Collect categories for datalist
-    const categories = new Set();
-    querySnapshot.forEach(doc => {
-        const d = doc.data();
-        if(d.kategori) categories.add(d.kategori);
-    });
-
-    // Accumulate categories globally to improve dropdown over pagination
-    if (!window.allEncounteredCategories) window.allEncounteredCategories = new Set();
-    categories.forEach(c => window.allEncounteredCategories.add(c));
-
-    const exportCatSelect = document.getElementById('exportCategoryFilter');
-    const filterCatSelect = document.getElementById('filterCategory');
-    if(exportCatSelect) {
-        const currentVal = exportCatSelect.value;
-        let catOptions = `<option value="all">Semua Kategori</option>`;
-        Array.from(window.allEncounteredCategories).sort().forEach(c => catOptions += `<option value="${c}">${c}</option>`);
-        exportCatSelect.innerHTML = catOptions;
-        exportCatSelect.value = currentVal;
-    }
-    
-    if(filterCatSelect) {
-        const currentVal = filterCatSelect.value;
-        let catOptions = `<option value="">Semua Kategori</option>`;
-        Array.from(window.allEncounteredCategories).sort().forEach(c => catOptions += `<option value="${c}">${c}</option>`);
-        filterCatSelect.innerHTML = catOptions;
-        filterCatSelect.value = currentVal;
-    }
-
-    const datalist = document.getElementById('categoryListAdmin');
-    if(datalist) datalist.innerHTML = Array.from(categories).map(c => `<option value="${c}">`).join('');
-
     querySnapshot.forEach((doc) => {
       const p = doc.data();
       window.productsData[doc.id] = p; // Simpan untuk keperluan edit
@@ -1249,15 +1313,13 @@ async function loadProducts(mode = 'refresh') {
            <button class="btn btn-featured-remove" onclick="removeFeatured('${doc.id}')">Hapus</button>`
         : `<button class="btn btn-featured-set" onclick="setFeatured('${doc.id}')">Jadikan Featured</button>`;
 
-      const subCatDisplay = p.sub_kategori ? `<br><small style="color:#666; font-style:italic;">${p.sub_kategori}</small>` : '';
-
       const row = `
         <tr>
           <td style="text-align: center;"><input type="checkbox" class="product-checkbox" value="${doc.id}" onchange="updateBulkDeleteButton()"></td>
           <td>${p.judul || p.name || '-'}</td>
           <td>
             <input type="text" list="categoryListAdmin" value="${p.kategori || ''}" onchange="updateInline('${doc.id}', 'kategori', this.value, this)" style="padding:5px; border:1px solid #ddd; border-radius:4px; width:100%; box-sizing:border-box;">
-            ${subCatDisplay}
+            <input type="text" list="subCategoryListAdmin" value="${p.sub_kategori || ''}" onchange="updateInline('${doc.id}', 'sub_kategori', this.value, this)" style="margin-top:5px; padding:5px; border:1px solid #ddd; border-radius:4px; width:100%; box-sizing:border-box; font-size:0.85em; color:#666;" placeholder="+ Sub Kategori">
           </td>
           <td>
             <input type="number" value="${p.harga}" onchange="updateInline('${doc.id}', 'harga', this.value, this)" style="padding:5px; border:1px solid #ddd; border-radius:4px; width:100px;">
