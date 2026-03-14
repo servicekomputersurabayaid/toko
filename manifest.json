@@ -1,7 +1,7 @@
 {
-  "name": "Toko Online - Service Komputer Surabaya ID",
-  "short_name": "Toko SKS ID",
-  "description": "Pusat Komputer & Aksesoris Terlengkap di Surabaya.",
+  "name": "Service Komputer Surabaya ID | Pusat Laptop & Sparepart terlengkap di Surabaya",
+  "short_name": "Laptop & Sparepart SKS ID",
+  "description": "Jual laptop, adaptor, kabel, LCD, SSD, hardisk, RAM, dan sparepart komputer terlengkap di Surabaya. Tersedia juga layanan service terpercaya bergaransi.",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
