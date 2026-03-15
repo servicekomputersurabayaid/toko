@@ -447,10 +447,7 @@ window.logoutAdmin = function() {
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // --- PROTEKSI ADMIN ---
-        // GANTI "admin@tokokita.com" dengan email Anda sendiri untuk login pertama kali!
-        let allowedEmail = "support@servicekomputersurabaya.id"; 
-        
+       let allowedEmail = atob("c3VwcG9ydEBzZXJ2aWNla29tcHV0ZXJzdXJhYmF5YS5pZA==");
         try {
             // Cek apakah ada settingan email admin di database
             const docRef = doc(db, "settings", "store_config");

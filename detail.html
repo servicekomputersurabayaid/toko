@@ -588,8 +588,7 @@
                 document.getElementById('review-form-container').style.display = 'block';
                 document.getElementById('login-to-review').style.display = 'none';
                 
-                // Cek Admin untuk Proteksi Copy
-                let adminEmail = "support@servicekomputersurabaya.id";
+                let adminEmail = atob("c3VwcG9ydEBzZXJ2aWNla29tcHV0ZXJzdXJhYmF5YS5pZA==");
                 try {
                     const docRef = doc(db, "settings", "store_config");
                     const docSnap = await getDoc(docRef);

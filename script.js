@@ -1600,7 +1600,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 async function checkAdminStatus(user) {
-    let adminEmail = "support@servicekomputersurabaya.id"; // Default fallback
+    let adminEmail = atob("c3VwcG9ydEBzZXJ2aWNla29tcHV0ZXJzdXJhYmF5YS5pZA=="); 
     
     // Cek config dari database jika belum ada di variabel global
     if (!storeConfig) {
