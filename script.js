@@ -61,29 +61,63 @@ function showSkeleton() {
 }
 
 // 1. Load Products from Firebase
-async function loadProducts() {
-    showSkeleton(); // Tampilkan skeleton sebelum fetch data
+async function loadProducts(useFirestore = false) {
+    if (!useFirestore) showSkeleton(); // Tampilkan skeleton hanya di awal fetch JSON
     const productList = document.getElementById('product-list');
     try {
-        const response = await fetch('produk.json');
-        if (!response.ok) throw new Error("Gagal memuat produk.json");
-        const jsonData = await response.json();
+        if (useFirestore) {
+            // Fetch dari Firestore (Khusus Admin)
+            const querySnapshot = await getDocs(collection(db, "products"));
+            products = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const isActive = data.status ? (data.status === 'active') : (data.active !== false);
+                if (isActive) {
+                    let dateObj = new Date(0);
+                    if (data.createdAt) {
+                        if (typeof data.createdAt.toDate === 'function') dateObj = data.createdAt.toDate();
+                        else if (data.createdAt.seconds) dateObj = new Date(data.createdAt.seconds * 1000);
+                        else dateObj = new Date(data.createdAt);
+                    }
+                    products.push({
+                        id: doc.id,
+                        name: data.judul || data.name || "Produk Tanpa Nama",
+                        price: parseInt(data.harga || data.price || 0),
+                        originalPrice: parseInt(data.harga_diskon || 0),
+                        weight: parseInt(data.berat || data.weight || 1000),
+                        category: data.kategori || "Umum",
+                        subCategory: data.sub_kategori || "",
+                        shortDesc: data.deskripsi_singkat || "",
+                        image: data.image_url || "https://via.placeholder.com/150",
+                        variants: data.variants || data.varian || [],
+                        isFeatured: data.isFeatured || false,
+                        featuredOrder: data.featuredOrder || 99,
+                        date: dateObj
+                    });
+                }
+            });
+        } else {
+            // Fetch dari JSON statis (Untuk Pengunjung Biasa)
+            const response = await fetch('produk.json');
+            if (!response.ok) throw new Error("Gagal memuat produk.json");
+            const jsonData = await response.json();
 
-        products = jsonData.map(data => ({
-            id: data.id,
-            name: data.name || "Produk Tanpa Nama",
-            price: data.price || 0,
-            originalPrice: data.originalPrice || 0,
-            weight: data.weight || 1000,
-            category: data.category || "Umum",
-            subCategory: data.subCategory || "",
-            shortDesc: data.shortDesc || "",
-            image: data.image || "https://via.placeholder.com/150",
-            variants: data.variants || [],
-            isFeatured: data.isFeatured || false,
-            featuredOrder: data.featuredOrder || 99,
-            date: data.createdAt ? new Date(data.createdAt) : new Date(0)
-        }));
+            products = jsonData.map(data => ({
+                id: data.id,
+                name: data.name || "Produk Tanpa Nama",
+                price: data.price || 0,
+                originalPrice: data.originalPrice || 0,
+                weight: data.weight || 1000,
+                category: data.category || "Umum",
+                subCategory: data.subCategory || "",
+                shortDesc: data.shortDesc || "",
+                image: data.image || "https://via.placeholder.com/150",
+                variants: data.variants || [],
+                isFeatured: data.isFeatured || false,
+                featuredOrder: data.featuredOrder || 99,
+                date: data.createdAt ? new Date(data.createdAt) : new Date(0)
+            }));
+        }
 
         // Render Sidebar Kategori
         const categories = [...new Set(products.map(p => p.category))].sort();
@@ -1588,6 +1622,9 @@ async function checkAdminStatus(user) {
         const btnMobileAdmin = document.getElementById('btn-mobile-admin');
         if(btnMobileAdmin) btnMobileAdmin.style.display = 'block';
         document.body.classList.add('admin-mode');
+        
+        // Re-load produk secara Live dari Firestore khusus Admin
+        loadProducts(true);
     }
 }
 

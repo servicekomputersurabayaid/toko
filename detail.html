@@ -254,6 +254,63 @@
             document.head.appendChild(script);
         }
 
+        function renderDetailUI() {
+            updateSEO(currentProduct);
+            updateBreadcrumb(currentProduct);
+
+            const cleanShortDesc = currentProduct.shortDesc ? currentProduct.shortDesc.replace(/<[^>]*>?/gm, '').replace(/"/g, '&quot;').trim() : "";
+            const altText = cleanShortDesc ? `${currentProduct.name} - ${cleanShortDesc}` : currentProduct.name;
+
+            document.getElementById('d-image').src = currentProduct.image;
+            document.getElementById('d-image').alt = altText;
+            document.getElementById('d-title').innerText = currentProduct.name;
+            
+            const priceEl = document.getElementById('d-price');
+            if (currentProduct.originalPrice > currentProduct.price) {
+                const discount = Math.round(((currentProduct.originalPrice - currentProduct.price) / currentProduct.originalPrice) * 100);
+                priceEl.innerHTML = `
+                    <span style="text-decoration: line-through; color: #95a5a6; font-size: 1.1rem; margin-right: 8px;">Rp ${currentProduct.originalPrice.toLocaleString('id-ID')}</span>
+                    <span>Rp ${currentProduct.price.toLocaleString('id-ID')}</span>
+                    <span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:4px; font-size:0.9rem; margin-left:8px; vertical-align: middle;">-${discount}%</span>
+                `;
+            } else {
+                priceEl.innerText = "Rp " + currentProduct.price.toLocaleString('id-ID');
+            }
+            
+            document.getElementById('d-desc').innerText = currentProduct.description;
+
+            const thumbContainer = document.getElementById('d-thumbnails');
+            if (currentProduct.images && currentProduct.images.length > 1) {
+                thumbContainer.innerHTML = currentProduct.images.map((img, index) => `
+                    <img src="${img}" alt="${altText} - Gambar ${index + 1}" class="thumbnail ${index === 0 ? 'active' : ''}" onclick="changeMainImage(this, '${img}')">
+                `).join('');
+            } else {
+                thumbContainer.innerHTML = ''; 
+            }
+
+            const varSection = document.getElementById('variant-section');
+            const varOptions = document.getElementById('variant-options');
+            
+            if (currentProduct.variants && currentProduct.variants.length > 0) {
+                varSection.style.display = 'block';
+                varOptions.innerHTML = currentProduct.variants.map((v, i) => `
+                    <button class="btn-variant" onclick="selectVariant(${i})" 
+                    style="padding:8px 16px; border:1px solid #ddd; background:var(--bg-card); color:var(--text-main); border-radius:4px; cursor:pointer; transition:0.2s;">
+                    ${v.name}
+                    </button>
+                `).join('');
+            } else {
+                varSection.style.display = 'none';
+            }
+
+            const isWishlist = wishlist.some(item => item.id === currentProduct.id);
+            const wishBtn = document.getElementById('btn-wishlist-detail');
+            if(isWishlist) wishBtn.innerHTML = '<span class="material-icons" style="vertical-align: middle; font-size: 1.2rem;">favorite</span> Tersimpan di Wishlist';
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('detail-content').style.display = 'grid';
+        }
+
         async function loadDetail() {
             if (!productId) {
                 document.getElementById('loading').innerText = "Produk tidak ditemukan.";
@@ -271,66 +328,7 @@
 
                 if (productData) {
                     currentProduct = productData; // Data JSON sudah rapi dari admin
-
-                    // Update SEO Tags
-                    updateSEO(currentProduct);
-                    updateBreadcrumb(currentProduct);
-
-                    // Siapkan Teks Alt Gambar SEO (Judul + Deskripsi Singkat)
-                    const cleanShortDesc = currentProduct.shortDesc.replace(/<[^>]*>?/gm, '').replace(/"/g, '&quot;').trim();
-                    const altText = cleanShortDesc ? `${currentProduct.name} - ${cleanShortDesc}` : currentProduct.name;
-
-                    // Render ke HTML
-                    document.getElementById('d-image').src = currentProduct.image;
-                    document.getElementById('d-image').alt = altText;
-                    document.getElementById('d-title').innerText = currentProduct.name;
-                    
-                    // Render Harga & Diskon
-                    const priceEl = document.getElementById('d-price');
-                    if (currentProduct.originalPrice > currentProduct.price) {
-                        const discount = Math.round(((currentProduct.originalPrice - currentProduct.price) / currentProduct.originalPrice) * 100);
-                        priceEl.innerHTML = `
-                            <span style="text-decoration: line-through; color: #95a5a6; font-size: 1.1rem; margin-right: 8px;">Rp ${currentProduct.originalPrice.toLocaleString('id-ID')}</span>
-                            <span>Rp ${currentProduct.price.toLocaleString('id-ID')}</span>
-                            <span style="background:#e74c3c; color:white; padding:4px 8px; border-radius:4px; font-size:0.9rem; margin-left:8px; vertical-align: middle;">-${discount}%</span>
-                        `;
-                    } else {
-                        priceEl.innerText = "Rp " + currentProduct.price.toLocaleString('id-ID');
-                    }
-                    
-                    document.getElementById('d-desc').innerText = currentProduct.description;
-
-                    // Render Thumbnails
-                    const thumbContainer = document.getElementById('d-thumbnails');
-                    if (currentProduct.images.length > 1) {
-                        thumbContainer.innerHTML = currentProduct.images.map((img, index) => `
-                            <img src="${img}" alt="${altText} - Gambar ${index + 1}" class="thumbnail ${index === 0 ? 'active' : ''}" onclick="changeMainImage(this, '${img}')">
-                        `).join('');
-                    } else {
-                        thumbContainer.innerHTML = ''; // Kosongkan jika cuma 1 gambar
-                    }
-
-                    // Render Varian jika ada
-                    const varSection = document.getElementById('variant-section');
-                    const varOptions = document.getElementById('variant-options');
-                    
-                    if (currentProduct.variants.length > 0) {
-                        varSection.style.display = 'block';
-                        varOptions.innerHTML = currentProduct.variants.map((v, i) => `
-                            <button class="btn-variant" onclick="selectVariant(${i})" 
-                            style="padding:8px 16px; border:1px solid #ddd; background:var(--bg-card); color:var(--text-main); border-radius:4px; cursor:pointer; transition:0.2s;">
-                            ${v.name}
-                            </button>
-                        `).join('');
-                    }
-
-                    // Update tombol wishlist jika sudah ada
-                    const isWishlist = wishlist.some(item => item.id === currentProduct.id);
-                    const wishBtn = document.getElementById('btn-wishlist-detail');
-                    if(isWishlist) wishBtn.innerHTML = '<span class="material-icons" style="vertical-align: middle; font-size: 1.2rem;">favorite</span> Tersimpan di Wishlist';
-
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('detail-content').style.display = 'grid';
+                    renderDetailUI();
                     loadRelatedProducts(currentProduct);
                     loadReviews(currentProduct.id);
                 } else {
@@ -340,6 +338,35 @@
                 console.error(error);
                 document.getElementById('loading').innerText = "Terjadi kesalahan memuat data.";
             }
+        }
+
+        async function loadDetailFromFirestore() {
+            try {
+                const docRef = doc(db, "products", productId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    const isActive = data.status ? (data.status === 'active') : (data.active !== false);
+                    if (!isActive) return; // Jangan timpa jika tidak aktif
+
+                    currentProduct = {
+                        id: docSnap.id,
+                        name: data.judul || data.name,
+                        price: parseInt(data.harga || data.price),
+                        originalPrice: parseInt(data.harga_diskon || 0),
+                        image: data.image_url,
+                        weight: parseInt(data.berat || data.weight || 1000),
+                        images: data.images || [data.image_url],
+                        description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi.",
+                        shortDesc: data.deskripsi_singkat || "",
+                        category: data.kategori || "Umum",
+                        variants: data.variants || data.varian || []
+                    };
+                    renderDetailUI();
+                }
+            } catch (e) { console.error("Gagal load dari Firestore:", e); }
         }
 
         // Fungsi Pilih Varian (Global agar bisa dipanggil onclick)
@@ -421,7 +448,6 @@
                             </div>
                         </div>
                     `;
-                    count++;
                 });
                 
                 if (html === "") {
@@ -608,6 +634,8 @@
                             }
                         });
                     }
+                    // Live override data dari Firestore khusus untuk Admin
+                    loadDetailFromFirestore();
                 }
                 startSessionTimer(auth); // Aktifkan pemantau aktivitas untuk user
             } else {
