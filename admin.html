@@ -196,6 +196,7 @@
     <option value="all">Semua Sub Kategori</option>
 </select>
 <button onclick="exportCSV()">Download CSV (Export)</button>
+<button onclick="exportJSON()" style="background-color: #f39c12; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Generate produk.json</button>
 <button onclick="deleteAllProducts()" style="background-color: #d32f2f; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Hapus Semua Data</button>
 <button onclick="restoreData()" style="background-color: #2196F3; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Restore Data Terakhir</button>
 <button onclick="window.open('upload_images.html', '_blank')" style="background-color: #9c27b0; color: white; border: none; padding: 6px 12px; cursor: pointer; margin-left: 5px;">Upload Gambar Masal</button>
@@ -895,6 +896,52 @@ window.exportCSV = async function() {
   } catch (error) {
     console.error(error);
     status.innerHTML = "Gagal export: " + error.message;
+  }
+}
+
+window.exportJSON = async function() {
+  const status = document.getElementById("status");
+  status.innerHTML = "Sedang mengekspor JSON...";
+  try {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    const products = [];
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      // Hanya ambil produk yang aktif untuk disajikan ke publik
+      const isActive = data.status ? (data.status === 'active') : (data.active !== false);
+      if (isActive) {
+        products.push({
+          id: doc.id,
+          name: data.judul || data.name || "Produk Tanpa Nama",
+          price: parseInt(data.harga || data.price || 0),
+          originalPrice: parseInt(data.harga_diskon || 0),
+          weight: parseInt(data.berat || data.weight || 1000),
+          category: data.kategori || "Umum",
+          subCategory: data.sub_kategori || "",
+          shortDesc: data.deskripsi_singkat || "",
+          description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi.",
+          image: data.image_url || "",
+          images: data.images || [data.image_url],
+          variants: data.variants || data.varian || []
+        });
+      }
+    });
+
+    const jsonString = JSON.stringify(products);
+    const blob = new Blob([jsonString], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "produk.json");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    status.innerHTML = "Berhasil export produk.json. Silakan letakkan file ini sejajar dengan file index.html di hosting Anda.";
+  } catch (error) {
+    console.error(error);
+    status.innerHTML = "Gagal export JSON: " + error.message;
   }
 }
 

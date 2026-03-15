@@ -177,6 +177,7 @@
         let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
         document.getElementById('cart-count').innerText = cart.reduce((acc, item) => acc + item.qty, 0);
         document.getElementById('wishlist-count').innerText = wishlist.length;
+        window.allProductsCache = null; // Menyimpan cache JSON
 
         function updateSEO(product) {
             const priceStr = product.price.toLocaleString('id-ID');
@@ -260,32 +261,16 @@
             }
 
             try {
-                const docRef = doc(db, "products", productId);
-                const docSnap = await getDoc(docRef);
+                // Ambil data dari produk.json statis agar lebih cepat dan mudah di-crawl Google
+                const response = await fetch('produk.json');
+                if (!response.ok) throw new Error("Gagal memuat produk.json");
+                const products = await response.json();
+                window.allProductsCache = products; // Simpan untuk produk terkait
+                
+                const productData = products.find(p => p.id === productId);
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    // Cek status produk
-                    const isActive = data.status ? (data.status === 'active') : (data.active !== false);
-                    if (!isActive) {
-                        document.getElementById('loading').innerText = "Maaf, produk ini sedang tidak aktif atau tidak tersedia.";
-                        return;
-                    }
-
-                    currentProduct = {
-                        id: docSnap.id,
-                        name: data.judul || data.name,
-                        price: parseInt(data.harga || data.price),
-                        originalPrice: parseInt(data.harga_diskon || 0),
-                        image: data.image_url,
-                        weight: parseInt(data.berat || data.weight || 1000),
-                        images: data.images || [data.image_url], // Ambil array images atau fallback ke single image
-                        description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi.",
-                        shortDesc: data.deskripsi_singkat || "",
-                        category: data.kategori || "Umum",
-                        variants: data.variants || data.varian || [] // Ambil data varian
-                    };
+                if (productData) {
+                    currentProduct = productData; // Data JSON sudah rapi dari admin
 
                     // Update SEO Tags
                     updateSEO(currentProduct);
@@ -405,34 +390,32 @@
         async function loadRelatedProducts(product) {
             const relatedContainer = document.getElementById('related-products');
             try {
-                // Query produk berdasarkan kategori yang sama, limit 6 (untuk jaga-jaga jika produk yg sama terambil)
-                const q = query(collection(db, "products"), where("kategori", "==", product.category), limit(6));
-                const querySnapshot = await getDocs(q);
+                if (!window.allProductsCache) return;
                 
-                let html = "";
-                let count = 0;
-                querySnapshot.forEach((doc) => {
-                    // Jangan tampilkan produk yang sedang dibuka & batasi max 4 produk
-                    if(doc.id === product.id || count >= 4) return;
+                // Filter dari JSON cache, bukan dari Firestore
+                const relatedProducts = window.allProductsCache
+                    .filter(p => p.category === product.category && p.id !== product.id)
+                    .slice(0, 4);
 
-                    const p = doc.data();
-                    const name = p.judul || p.name || "Produk";
-                    const price = parseInt(p.harga || p.price || 0);
-                    const image = p.image_url || "https://via.placeholder.com/150";
-                    const weight = parseInt(p.berat || p.weight || 1000);
+                let html = "";
+                relatedProducts.forEach((p) => {
+                    const name = p.name || "Produk";
+                    const price = p.price || 0;
+                    const image = p.image || "https://via.placeholder.com/150";
+                    const weight = p.weight || 1000;
                     
-                    const shortDesc = p.deskripsi_singkat ? p.deskripsi_singkat.replace(/<[^>]*>?/gm, '').replace(/"/g, '&quot;').trim() : "";
+                    const shortDesc = p.shortDesc ? p.shortDesc.replace(/<[^>]*>?/gm, '').replace(/"/g, '&quot;').trim() : "";
                     const altTextRelated = shortDesc ? `${name} - ${shortDesc}` : name;
 
                     html += `
                         <div class="product-card">
-                            <div onclick="window.location.href='detail.html?id=${doc.id}&slug=${encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">
+                            <div onclick="window.location.href='detail.html?id=${p.id}&slug=${encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">
                                 <img src="${image}" alt="${altTextRelated}" class="product-img">
                             </div>
                             <div class="product-info">
-                                <h3 class="product-title" onclick="window.location.href='detail.html?id=${doc.id}&slug=${encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">${name}</h3>
+                                <h3 class="product-title" onclick="window.location.href='detail.html?id=${p.id}&slug=${encodeURIComponent(name.replace(/\s+/g, '-').toLowerCase())}'" style="cursor:pointer">${name}</h3>
                                 <p class="product-price">Rp ${price.toLocaleString('id-ID')}</p>
-                                <button class="btn-add btn-related" data-id="${doc.id}" data-name="${name}" data-price="${price}" data-image="${image}" data-weight="${weight}">
+                                <button class="btn-add btn-related" data-id="${p.id}" data-name="${name}" data-price="${price}" data-image="${image}" data-weight="${weight}">
                                     + Keranjang
                                 </button>
                             </div>
