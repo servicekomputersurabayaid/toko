@@ -65,47 +65,25 @@ async function loadProducts() {
     showSkeleton(); // Tampilkan skeleton sebelum fetch data
     const productList = document.getElementById('product-list');
     try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        products = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            
-            // Filter: Hanya tampilkan produk dengan status 'active'
-            // Kompatibilitas: Cek data.status == 'active' ATAU (jika status kosong) data.active != false
-            const isActive = data.status ? (data.status === 'active') : (data.active !== false);
+        const response = await fetch('produk.json');
+        if (!response.ok) throw new Error("Gagal memuat produk.json");
+        const jsonData = await response.json();
 
-            if (isActive) {
-                // Mapping data dari admin.html (judul, harga) ke frontend (name, price)
-                
-                // Parsing Tanggal yang Lebih Robust
-                let dateObj = new Date(0); // Default 1970
-                if (data.createdAt) {
-                    if (typeof data.createdAt.toDate === 'function') {
-                        dateObj = data.createdAt.toDate(); // Firestore Timestamp
-                    } else if (data.createdAt.seconds) {
-                        dateObj = new Date(data.createdAt.seconds * 1000); // Raw Timestamp Object
-                    } else {
-                        dateObj = new Date(data.createdAt); // String/Date Object
-                    }
-                }
-
-                products.push({
-                    id: doc.id,
-                    name: data.judul || data.name || "Produk Tanpa Nama",
-                    price: parseInt(data.harga || data.price || 0),
-                    originalPrice: parseInt(data.harga_diskon || 0),
-                    weight: parseInt(data.berat || data.weight || 1000), // Ambil berat (gram)
-                    category: data.kategori || "Umum",
-                    subCategory: data.sub_kategori || "", // Load Sub Kategori
-                    shortDesc: data.deskripsi_singkat || "", // Load Deskripsi Singkat
-                    image: data.image_url || "https://via.placeholder.com/150",
-                    variants: data.variants || data.varian || [], // Load Varian
-                    isFeatured: data.isFeatured || false, // Tambahkan ini
-                    featuredOrder: data.featuredOrder || 99, // Tambahkan ini
-                    date: dateObj // Load Tanggal yang sudah diparsing
-                });
-            }
-        });
+        products = jsonData.map(data => ({
+            id: data.id,
+            name: data.name || "Produk Tanpa Nama",
+            price: data.price || 0,
+            originalPrice: data.originalPrice || 0,
+            weight: data.weight || 1000,
+            category: data.category || "Umum",
+            subCategory: data.subCategory || "",
+            shortDesc: data.shortDesc || "",
+            image: data.image || "https://via.placeholder.com/150",
+            variants: data.variants || [],
+            isFeatured: data.isFeatured || false,
+            featuredOrder: data.featuredOrder || 99,
+            date: data.createdAt ? new Date(data.createdAt) : new Date(0)
+        }));
 
         // Render Sidebar Kategori
         const categories = [...new Set(products.map(p => p.category))].sort();

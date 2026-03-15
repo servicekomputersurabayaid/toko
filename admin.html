@@ -923,7 +923,10 @@ window.exportJSON = async function() {
           description: data.deskripsi_panjang || data.deskripsi_singkat || "Tidak ada deskripsi.",
           image: data.image_url || "",
           images: data.images || [data.image_url],
-          variants: data.variants || data.varian || []
+          variants: data.variants || data.varian || [],
+          isFeatured: data.isFeatured || false,
+          featuredOrder: data.featuredOrder || 99,
+          createdAt: data.createdAt ? (typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().toISOString() : (data.createdAt.seconds ? new Date(data.createdAt.seconds * 1000).toISOString() : new Date(data.createdAt).toISOString())) : null
         });
       }
     });
